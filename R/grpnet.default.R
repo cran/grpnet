@@ -24,7 +24,7 @@ grpnet.default <-
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-07-05
+    # Updated: 2023-08-30
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -58,6 +58,7 @@ grpnet.default <-
       gsize <- table(group)
       group <- as.integer(group)
     }
+    gnames <- names(gsize)
     
     ### check family
     family <- pmatch(as.character(family[1]), c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian"))
@@ -178,6 +179,7 @@ grpnet.default <-
         nlev <- nlevels(y)
         if(nlev < 3L) stop("Input 'y' must be (coercible into) a factor with 3 or more levels.")
         y <- matrix(0.0, nrow = nobs, ncol = nlev)
+        colnames(y) <- ylev
         for(i in 1:nobs) y[i,yint[i]] <- 1.0
       } else if(is.matrix(y)){
         nlev <- ncol(y)
@@ -297,6 +299,7 @@ grpnet.default <-
     ### check intercept
     intercept <- as.logical(intercept[1])
     if(!any(intercept == c(TRUE, FALSE))) stop("Input 'intercept' must be TRUE or FALSE")
+    if(intercept) gnames <- c("(Intercept)", gnames)
     
     ### check thresh
     thresh <- as.numeric(thresh[1])
@@ -322,7 +325,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -354,7 +357,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -387,7 +390,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -431,7 +434,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -463,7 +466,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -496,7 +499,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -528,7 +531,7 @@ grpnet.default <-
                       off = offset,
                       ngrps = ngrps,
                       gsize = gsize, 
-                      pw = sqrt(gsize),
+                      pw = penalty.factor,
                       alpha = alpha,
                       nlam = nlambda,
                       lambda = lambda,
@@ -569,6 +572,12 @@ grpnet.default <-
                  thresh = thresh,
                  maxit = maxit)
     
+    ## intercept
+    if(intercept){
+      ingroup <- c(0, ingroup)
+      ngrps <- ngrps + 1L
+    }
+    
     ## collect results
     res <- list(call = grpnet.call,
                 a0 = res$ibeta, 
@@ -587,7 +596,8 @@ grpnet.default <-
                 ngroups = ngrps,
                 npasses = res$iters, 
                 offset = include.offset,
-                args = args)
+                args = args,
+                term.labels = gnames)
     
     ### return results
     class(res) <- "grpnet"

@@ -8,12 +8,26 @@ Plot Coefficients for grpnet Fits
 Creates a profile plot of the coefficient paths for a fit group elastic net regularized GLM (grpnet) object.
 }
 \usage{
-\method{plot}{grpnet}(x, color.by.group = TRUE, col = NULL, ...)
+\method{plot}{grpnet}(x, type = c("coef", "norm", "imp"),
+     newx, newdata, intercept = FALSE,
+     color.by.group = TRUE, col = NULL, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
 Object of class "grpnet"
+}
+  \item{type}{
+What to plot on the Y-axis: "coef" for coefficient values, "norm" for L2 norm of coefficients for each group, or "imp" for importance of each group's contribution. 
+}
+  \item{newx}{
+Matrix of new \code{x} scores for prediction (default S3 method). Ignored unless \code{type = "imp"}.
+}
+  \item{newdata}{
+Data frame of new \code{data} scores for prediction (S3 "formula" method). Ignored unless \code{type = "imp"}.
+}
+  \item{intercept}{
+Should the intercept be included in the plot?  
 }
   \item{color.by.group}{
 If \code{TRUE} (default), the coefficient paths are colored according to their group membership using the colors in \code{col}. If \code{FALSE}, all coefficient paths are plotted the same color.
@@ -29,7 +43,7 @@ Additional arguments passed to the \code{\link{plot}} function.
 Syntax and functionality were modeled after the \code{plot.glmnet} function in the \bold{glmnet} package (Friedman, Hastie, & Tibshirani, 2010).
 }
 \value{
-Produces a profile plot showing the value of each coefficient (y-axis) as a function of \code{log(lambda)} (x-axis). 
+Produces a profile plot showing the requested type (y-axis) as a function of \code{log(lambda)} (x-axis). 
 }
 \references{
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}

@@ -34,6 +34,7 @@ grpnet(x, \dots)
       
 \method{grpnet}{formula}(formula,
        data, 
+       use.rk = TRUE,
        family = c("gaussian", "binomial", "multinomial", "poisson", 
                   "negative.binomial", "Gamma", "inverse.gaussian"),
        weights = NULL,
@@ -67,6 +68,9 @@ Model formula: a symbolic description of the model to be fitted. Uses the same s
 }
   \item{data}{
 Optional data frame containing the variables referenced in \code{formula}.
+}
+  \item{use.rk}{
+If \code{TRUE} (default), the \code{\link{rk.model.matrix}} function is used to build the model matrix. Otherwise, the \code{\link{model.matrix}} function is used to build the model matrix. Additional arguments to the \code{\link{rk.model.matrix}} function can be passed via the \code{...} argument.
 }
   \item{family}{
 Character specifying the assumed distribution for the response variable. Partial matching is allowed. Options include \code{"gaussian"} (real-valued response), \code{"binomial"} (binary response), \code{"multinomial"} (multi-class response), \code{"poisson"} (count response), \code{"negative.binomial"} (count response), \code{"Gamma"} (positive real-valued), or \code{"inverse.gaussian"} (positive real-valued). 
@@ -130,9 +134,9 @@ where \eqn{\mu = E(Y | \mathbf{X})} is the conditional expectation of the respon
 }
 where \eqn{\mathbf{X} = (\mathbf{X}_1, \ldots, \mathbf{X}_K)} is the grouped predictor vector, and \eqn{\boldsymbol\beta = (\boldsymbol\beta_1, \ldots, \boldsymbol\beta_K)} is the grouped coefficient vector. 
 
-Given \eqn{n} observations, this function solves group elastic net penalized likelihood problems of the form
+Given \eqn{n} observations, this function finds the \eqn{\boldsymbol\beta} that minimizes
 \deqn{
-\min_{\boldsymbol\beta \in \mathbb{R}^p} L(\boldsymbol\beta | \mathbf{D}) + \lambda P_\alpha(\boldsymbol\beta)
+L(\boldsymbol\beta | \mathbf{D}) + \lambda P_\alpha(\boldsymbol\beta)
 }
 where \eqn{L(\boldsymbol\beta | \mathbf{D})} is the loss function with \eqn{\mathbf{D} = \{\mathbf{y}, \mathbf{X}\}} denoting the observed data, \eqn{P_\alpha(\boldsymbol\beta)} is the group elastic net penalty, and \eqn{\lambda \geq 0} is the regularization parameter. 
 
@@ -177,6 +181,9 @@ An object of class \code{"grpnet"} with the following elements:
 \item{npasses }{number of iterations for each \code{lambda}}
 \item{offset }{logical indicating if an offset was included}
 \item{args }{list of input argument values}
+\item{formula }{input formula (possibly after expansion)}
+\item{term.labels }{terms that appear in formula (if applicable)}
+\item{rk.args }{arguments for rk.model.matrix function (if applicable)}
 }
 \references{
 Breheny, P., & Huang, J. (2015). Group descent algorithms for nonconvex penalized linear and logistic regression models with grouped predictors. \emph{Statistics and Computing, 25}, 173-187. \doi{10.1007/s11222-013-9424-2}
@@ -198,7 +205,7 @@ The syntax of (the default S3 method for) this function closely mimics that of t
 
 \bold{Polynomials}: When including polynomial terms, the \code{\link{poly}} function should be used with option \code{raw = TRUE}. Default use of the \code{\link{poly}} function (with \code{raw = FALSE}) will work for fitting the model, but will result in invalid predictions for new data. Polynomials can also be included via the \code{\link{I}} function, but this isn't recommended because the polynomials terms wouldn't be grouped together, i.e., the terms \code{x} and \code{I(x^2)} would be treated as two separate groups of size one instead of a single group of size two.
 
-\bold{B-splines}: B-splines (or other types of spline bases) can be included via the S3 "formula" method. However, to ensure reasonable predictions for new data, it is necessary to specify the knots directly. For example, if \code{x} is a vector with entries between zero and one, the code \code{bs(x, df = 5)} will *not* produce valid predictions for new data, but the code \code{bs(x, knots = c(0.25, 0.5, 0.75), Boundary.knots = c(0, 1))} will work as intended. 
+\bold{Splines}: B-splines (and other spline bases) can be included via the S3 "formula" method. However, to ensure reasonable predictions for new data, it is necessary to specify the knots directly. For example, if \code{x} is a vector with entries between zero and one, the code \code{bs(x, df = 5)} will *not* produce valid predictions for new data, but the code \code{bs(x, knots = c(0.25, 0.5, 0.75), Boundary.knots = c(0, 1))} will work as intended. Instead of attempting to integrate a call to \code{bs()} or \code{rk()} into the model formula, it is recommended that splines be included via the \code{use.rk = TRUE} argument.
 }
 
 \section{Family argument and link functions}{
@@ -261,7 +268,7 @@ mod
 plot(mod)
 
 
-
+\donttest{
 ######***######   family = "binomial"   ######***######
 
 # load data
@@ -271,10 +278,10 @@ data(auto)
 y <- ifelse(auto$origin == "American", 1, 0)
 
 # define predictors
-x <- model.matrix(~ ., data = auto[,1:7])[,-1]
+x <- rk.model.matrix(~ 0 + ., data = auto[,1:7])
 
-# define group (according to colnames(x))
-g <- c(1, 2, 2, 2, 2, 3, 4, 5, 6, 7)
+# define group
+g <- attr(x, "assign")
 
 # fit model (default method, response = y)
 mod <- grpnet(x, y, g, family = "binomial")
@@ -365,9 +372,11 @@ mod
 # plot coefficient paths
 plot(mod)
 }
+}
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory (show via RShowDoc("KEYWORDS")):
 \keyword{ regression }
+\keyword{ smooth }
 % Use only one keyword per line.
 % For non-standard keywords, use \concept instead of \keyword:
 % \concept{ ~cpt1 }

@@ -83,7 +83,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto)
+mod <- cv.grpnet(mpg ~ ., data = auto, alpha = 1)
 
 # extract coefs for "min" solution (output = 12 x 1 matrix)
 coef(mod)

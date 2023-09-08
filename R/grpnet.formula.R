@@ -3,7 +3,8 @@
 
 grpnet.formula <-
   function(formula,
-           data, 
+           data,
+           use.rk = TRUE,
            family = c("gaussian", "binomial", "multinomial", "poisson", 
                       "negative.binomial", "Gamma", "inverse.gaussian"),
            weights = NULL,
@@ -22,7 +23,7 @@ grpnet.formula <-
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-07-05
+    # Updated: 2023-09-05
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -34,13 +35,6 @@ grpnet.formula <-
     formula <- as.formula(formula)
     charform <- as.character(formula)
     if(charform[1] != "~") stop("Input 'formula' must be of the form:  y ~ x")
-    
-    ### check data
-    if(missing(data)){
-      data <- parent.frame()
-    } else {
-      data <- as.data.frame(data)
-    }
     
     ### model frame (modified from R's lm() function)
     mf <- match.call(expand.dots = FALSE)
@@ -56,7 +50,16 @@ grpnet.formula <-
     y <- model.response(mf, "any")
     
     ### model matrix
-    x <- model.matrix(object = formula, data = data)
+    rk.args <- NULL
+    if(use.rk){
+      x <- rk.model.matrix(object = formula, data = mf, ...)
+      rk.args <- list(knots = attr(x, "knots"),
+                      m = attr(x, "m"),
+                      periodic = attr(x, "periodic"),
+                      xlev = attr(x, "xlev"))
+    } else {
+      x <- model.matrix(object = formula, data = mf)
+    }
     
     ### model terms
     terms <- attr(mf, "terms")
@@ -129,6 +132,13 @@ grpnet.formula <-
     
     ### add the (potential expanded) formula
     res$formula <- as.formula(paste0(yname, " ~ ", paste(term.labels, collapse = " + ")))
+    
+    ### add the term.labels
+    if(intercept) term.labels <- c("(Intercept)", term.labels)
+    res$term.labels <- term.labels
+    
+    ### add the rk.args
+    res$rk.args <- rk.args
     
     ### return results
     return(res)

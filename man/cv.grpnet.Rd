@@ -29,6 +29,7 @@ cv.grpnet(x, \dots)
            
 \method{cv.grpnet}{formula}(formula,
           data, 
+          use.rk = TRUE,
           weights = NULL,
           offset = NULL,
           alpha = c(0.01, 0.25, 0.5, 0.75, 1),
@@ -57,6 +58,9 @@ Model formula: a symbolic description of the model to be fitted. Uses the same s
 }
   \item{data}{
 Optional data frame containing the variables referenced in \code{formula}.
+}
+  \item{use.rk}{
+If \code{TRUE} (default), the \code{\link{rk.model.matrix}} function is used to build the model matrix. Otherwise, the \code{\link{model.matrix}} function is used to build the model matrix. Additional arguments to the \code{\link{rk.model.matrix}} function can be passed via the \code{...} argument.
 }
   \item{weights}{
 Optional vector of length \eqn{n} with non-negative weights to use for weighted (penalized) likelihood estimation. Defaults to a vector of ones.
@@ -123,7 +127,6 @@ which is the classic definition of the standard error of the mean.
 \item{type.measure}{loss function for cross-validation (used for plot label)}
 \item{call}{matched call}
 \item{alpha}{input \code{alpha} vector and min(cvm) for each \code{alpha} (if \code{alpha} is a vector)}
-\item{formula}{input model \code{formula} (if S3 formula method was used)}
 }
 \references{
 Breheny, P., & Huang, J. (2015). Group descent algorithms for nonconvex penalized linear and logistic regression models with grouped predictors. \emph{Statistics and Computing, 25}, 173-187. \doi{10.1007/s11222-013-9424-2}
@@ -161,7 +164,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto)
+mod <- cv.grpnet(mpg ~ ., data = auto, alpha = 1)
 
 # print min and 1se solution info
 mod
@@ -180,14 +183,14 @@ data(auto)
 y <- ifelse(auto$origin == "American", 1, 0)
 
 # define predictors
-x <- model.matrix(~ ., data = auto[,1:7])[,-1]
+x <- rk.model.matrix(~ 0 + ., data = auto[,1:7])
 
-# define group (according to colnames(x))
-g <- c(1, 2, 2, 2, 2, 3, 4, 5, 6, 7)
+# define group
+g <- attr(x, "assign")
 
 # 10-fold cv (default method, response = y)
 set.seed(1)
-mod <- cv.grpnet(x, y, g, family = "binomial")
+mod <- cv.grpnet(x, y, g, family = "binomial", alpha = 1)
 
 # print min and 1se solution info
 mod
@@ -204,7 +207,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson")
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson", alpha = 1)
 
 # print min and 1se solution info
 mod
@@ -221,7 +224,8 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial", theta = 100)
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial", 
+                 alpha = 1, theta = 100)
 
 # print min and 1se solution info
 mod
@@ -238,7 +242,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial")
+mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial", alpha = 1)
 
 # print min and 1se solution info
 mod
@@ -255,7 +259,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma")
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma", alpha = 1)
 
 # print min and 1se solution info
 mod
@@ -272,7 +276,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian")
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian", alpha = 1)
 
 # print min and 1se solution info
 mod
@@ -285,6 +289,7 @@ plot(mod)
 % Add one or more standard keywords, see file 'KEYWORDS' in the
 % R documentation directory (show via RShowDoc("KEYWORDS")):
 \keyword{ regression }
+\keyword{ smooth }
 % Use only one keyword per line.
 % For non-standard keywords, use \concept instead of \keyword:
 % \concept{ ~cpt1 }

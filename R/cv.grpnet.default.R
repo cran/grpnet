@@ -17,7 +17,7 @@ cv.grpnet.default <-
            verbose = interactive(), ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-07-05
+    # Updated: 2023-09-04
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -103,6 +103,7 @@ cv.grpnet.default <-
         nlev <- nlevels(y)
         if(nlev < 3L) stop("Input 'y' must be (coercible into) a factor with 3 or more levels.")
         y <- matrix(0.0, nrow = nobs, ncol = nlev)
+        colnames(y) <- ylev
         for(i in 1:nobs) y[i,yint[i]] <- 1.0
       } else if(is.matrix(y)){
         nlev <- ncol(y)
@@ -287,7 +288,11 @@ cv.grpnet.default <-
                          offset = offset, 
                          alpha = alpha,
                          ...)
-    grpnet.fit$group <- ingroup
+    if(grpnet.fit$args$intercept){
+      grpnet.fit$group <- c(0, ingroup)
+    } else{
+      grpnet.fit$group <- ingroup
+    }
     grpnet.fit$ylev <- ylev
     lambda <- grpnet.fit$lambda
     nlambda <- length(lambda)
@@ -555,6 +560,13 @@ cv.grpnet.default <-
     
     ### close cluster
     if(parallel && madeCluster) parallel::stopCluster(cluster)
+    
+    ### correct term.labels
+    if(grpnet.fit$args$intercept){
+      grpnet.fit$term.labels <- c("(Intercept)", names(gsize))
+    } else {
+      grpnet.fit$term.labels <- names(gsize)
+    }
     
     ### return results
     res <- list(lambda = lambda, 

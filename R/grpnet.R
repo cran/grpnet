@@ -22,32 +22,86 @@ print.grpnet <-
   } # end print.grpnet
 
 plot.grpnet <-
-  function(x, color.by.group = TRUE, col = NULL, ...){
+  function(x, type = c("coef", "norm", "imp"), 
+           newx, newdata, intercept = FALSE,
+           color.by.group = TRUE, col = NULL, ...){
+    int <- ifelse(x$args$intercept && !intercept, 1, 0)
+    types <- c("coef", "norm", "imp")
+    type <- pmatch(type[1], types)
+    if(is.na(type)) stop("Invalid 'type' input")
+    type <- types[type]
     if(color.by.group) {
       if(is.null(col)){
         col <- 1:x$ngroups
       } else {
         if(length(col) != x$ngroups) stop("Input 'col' must be of length x$ngroups")
       }
-      colors <- col[as.integer(as.factor(x$group))]
     } else {
-      if(is.null(col)) col <- "black"
-      colors <- rep(col[1], nrow(x$beta))
+      if(is.null(col)) col <- rep("black", x$ngroups)
     }
-    if(x$family$family == "multinomial"){
-      for(j in 1:length(x$beta)){
-        plot(log(x$lambda), x$beta[[j]][1,], ylim = extendrange(x$beta),
-             xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
-        legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
-        for(k in 1:nrow(x$beta[[j]])) {
-          lines(log(x$lambda), x$beta[[j]][k,], col = colors[k])
+    if(type == "imp" && missing(newx) && missing(newdata)){
+      stop("When type = 'imp', you need to provide either 'newx' or 'newdata'.")
+    }
+    res <- predict(x, newx = newx, newdata = newdata, type = type)
+    if(type == "imp"){
+      colors <- col
+      if(x$family$family == "multinomial"){
+        rnames <- rownames(res[[1]])
+        cnames <- colnames(res[[1]])
+        for(k in 1:length(res)){
+          res[[k]] <- rbind(0, res[[k]])
+          rownames(res[[k]]) <- c("(Intercept)", rnames)
+          colnames(res[[k]]) <- cnames
+        }
+        index <- (1+int):nrow(res[[1]])
+        for(j in 1:length(res)){
+          plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
+               xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
+          legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
+          for(k in index) {
+            lines(log(x$lambda), res[[j]][k,], col = colors[k])
+          }
+        }
+      } else {
+        rnames <- rownames(res)
+        cnames <- colnames(res)
+        res <- rbind(0, res)
+        rownames(res) <- c("(Intercept)", rnames)
+        colnames(res) <- cnames
+        index <- (1+int):nrow(res)
+        plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
+             xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
+        for(k in index) {
+          lines(log(x$lambda), res[k,], col = colors[k])
         }
       }
+    } else if(type == "norm"){
+      colors <- col
+      index <- (1+int):nrow(res)
+      plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
+           xlab = "Log Lambda", ylab = "L2 Norm", t = "n", ...)
+      for(k in index) {
+        lines(log(x$lambda), res[k,], col = colors[k])
+      }
     } else {
-      plot(log(x$lambda), x$beta[1,], ylim = extendrange(x$beta),
-           xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
-      for(k in 1:nrow(x$beta)) {
-        lines(log(x$lambda), x$beta[k,], col = colors[k])
+      colors <- col[as.integer(as.factor(x$group))]
+      if(x$family$family == "multinomial"){
+        index <- (1+int):nrow(res[[1]])
+        for(j in 1:length(res)){
+          plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
+               xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
+          legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
+          for(k in index) {
+            lines(log(x$lambda), res[[j]][k,], col = colors[k])
+          }
+        }
+      } else {
+        index <- (1+int):nrow(res)
+        plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
+             xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
+        for(k in index) {
+          lines(log(x$lambda), res[k,], col = colors[k])
+        }
       }
     }
     abline(h = 0)

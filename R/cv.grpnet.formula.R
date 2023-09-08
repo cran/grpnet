@@ -4,6 +4,7 @@
 cv.grpnet.formula <-
   function(formula,
            data, 
+           use.rk = TRUE,
            weights = NULL,
            offset = NULL,
            alpha = c(0.01, 0.25, 0.5, 0.75, 1),
@@ -17,7 +18,7 @@ cv.grpnet.formula <-
            ...){
     # k-fold cross-validation for grpnet (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-07-05
+    # Updated: 2023-09-05
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -29,13 +30,6 @@ cv.grpnet.formula <-
     formula <- as.formula(formula)
     charform <- as.character(formula)
     if(charform[1] != "~") stop("Input 'formula' must be of the form:  y ~ x")
-    
-    ### check data
-    if(missing(data)){
-      data <- parent.frame()
-    } else {
-      data <- as.data.frame(data)
-    }
     
     ### model frame (modified from R's lm() function)
     mf <- match.call(expand.dots = FALSE)
@@ -51,7 +45,16 @@ cv.grpnet.formula <-
     y <- model.response(mf, "any")
     
     ### model matrix
-    x <- model.matrix(object = formula, data = data)
+    rk.args <- NULL
+    if(use.rk){
+      x <- rk.model.matrix(object = formula, data = mf, ...)
+      rk.args <- list(knots = attr(x, "knots"),
+                      m = attr(x, "m"),
+                      periodic = attr(x, "periodic"),
+                      xlev = attr(x, "xlev"))
+    } else {
+      x <- model.matrix(object = formula, data = mf)
+    }
     
     ### model terms
     terms <- attr(mf, "terms")
@@ -148,8 +151,14 @@ cv.grpnet.formula <-
     res$call <- cv.grpnet.call
     
     ### add the (potential expanded) formula
-    res$formula <- as.formula(paste0(yname, " ~ ", paste(term.labels, collapse = " + ")))
-    res$grpnet.fit$formula <- res$formula
+    res$grpnet.fit$formula <- as.formula(paste0(yname, " ~ ", paste(term.labels, collapse = " + ")))
+    
+    ### add the term.labels
+    if(intercept) term.labels <- c("(Intercept)", term.labels)
+    res$grpnet.fit$term.labels <- term.labels
+    
+    ### add the rk.args
+    res$grpnet.fit$rk.args <- rk.args
     
     ### return results
     return(res)

@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-06-26
+!   Date: 2023-08-28
 
 
 ! INPUTS/OUTPUTS
@@ -246,6 +246,7 @@ SUBROUTINE grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
             maxlam = MAXVAL(gradnorm / alpha)
         ELSE
             maxlam = MAXVAL(gradnorm / 1.0E-3)
+            makelambda = 0
         END IF
         minlam = lmr * maxlam
         lambda(i) = maxlam

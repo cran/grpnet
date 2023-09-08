@@ -12,7 +12,8 @@ Obtain predictions from a cross-validated group elastic net regularized GLM (cv.
         newx,
         newdata,
         s = c("lambda.min", "lambda.1se"),
-        type = c("link", "response", "class"),
+        type = c("link", "response", "class", "terms", "importance", 
+                 "coefficients", "nonzero", "groups", "ncoefs", "ngroups", "norm"),
         ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -30,7 +31,7 @@ Data frame of new \code{data} scores for prediction (S3 "formula" method). Must 
 Lambda value(s) at which predictions should be obtained. Can input a character ("lambda.min" or "lambda.1se") or a numeric vector. Default of "lambda.min" uses the \code{lambda} value that minimizes the mean cross-validated error. 
 }
   \item{type}{
-Type of prediction to return. Note that "class" is only available for binomial and multinomial families.  
+Type of prediction to return. "link" gives predictions on the link scale (\eqn{\eta}). "response" gives predictions on the mean scale (\eqn{\mu}). "terms" gives the predictions for each term (group) in the model (\eqn{\eta_k}). "class" gives predicted class labels (for "binomial" and "multinomial" families). "coefficients" returns the coefficients used for predictions. "nonzero" returns a list giving the indices of non-zero coefficients for each \code{s}. "ncoefs" returns the number of non-zero coefficients for each \code{s}. "ngroups" returns the number of non-zero groups for each \code{s}. "norm" returns the L2 norm of each group's coefficients for each \code{s}.
 }
   \item{...}{
 Additional arguments (ignored)
@@ -74,7 +75,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto)
+mod <- cv.grpnet(mpg ~ ., data = auto, alpha = 1)
 
 # get fitted values at "lambda.min"
 fit.min <- predict(mod, newdata = auto)
@@ -98,14 +99,14 @@ data(auto)
 y <- ifelse(auto$origin == "American", 1, 0)
 
 # define predictors
-x <- model.matrix(~ ., data = auto[,1:7])[,-1]
+x <- rk.model.matrix(~ 0 + ., data = auto[,1:7])
 
-# define group (according to colnames(x))
-g <- c(1, 2, 2, 2, 2, 3, 4, 5, 6, 7)
+# define group
+g <- attr(x, "assign")
 
 # 10-fold cv (default method, response = y)
 set.seed(1)
-mod <- cv.grpnet(x, y, g, family = "binomial")
+mod <- cv.grpnet(x, y, g, family = "binomial", alpha = 1)
 
 # get fitted values at "lambda.min"
 fit.min <- predict(mod, newx = x, type = "response")
@@ -136,7 +137,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson")
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson", alpha = 1)
 
 # get fitted values at "lambda.min"
 fit.min <- predict(mod, newdata = auto, type = "response")
@@ -157,7 +158,8 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial", theta = 100)
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial", 
+                 alpha = 1, theta = 100)
 
 # get fitted values at "lambda.min"
 fit.min <- predict(mod, newdata = auto, type = "response")
@@ -178,7 +180,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial")
+mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial", alpha = 1)
 
 # get predicted classes at "lambda.min"
 fit.min <- predict(mod, newdata = auto, type = "class")
@@ -199,7 +201,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma")
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma", alpha = 1)
 
 # get fitted values at "lambda.min"
 fit.min <- predict(mod, newdata = auto, type = "response")
@@ -220,7 +222,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian")
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian", alpha = 1)
 
 # get fitted values at "lambda.min"
 fit.min <- predict(mod, newdata = auto, type = "response")
