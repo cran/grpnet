@@ -18,13 +18,14 @@ grpnet.default <-
            gamma = ifelse(penalty == "MCP", 3, 4),
            theta = 1,
            standardize = TRUE,
+           orthogonalize = FALSE,
            intercept = TRUE,
            thresh = 1e-04,
            maxit = 1e05,
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-08-30
+    # Updated: 2024-02-15
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -296,6 +297,10 @@ grpnet.default <-
     standardize <- as.logical(standardize[1])
     if(!any(standardize == c(TRUE, FALSE))) stop("Input 'standardize' must be TRUE or FALSE")
     
+    ### orthogonalize
+    orthogonalize <- as.logical(orthogonalize[1])
+    if(!any(orthogonalize == c(TRUE, FALSE))) stop("Input 'orthogonalize' must be TRUE or FALSE")
+    
     ### check intercept
     intercept <- as.logical(intercept[1])
     if(!any(intercept == c(TRUE, FALSE))) stop("Input 'intercept' must be TRUE or FALSE")
@@ -311,6 +316,28 @@ grpnet.default <-
     
     
     ######***######   WORK   ######***######
+    
+    ### orthogonalize?
+    if(orthogonalize){
+      xproj <- vector("list", ngrps)
+      for(k in 1:ngrps){
+        id <- which(group == k)
+        nk <- length(id)
+        xtemp <- wsqrt * x[,id]
+        if(nk == 1L){
+          xproj[[k]] <- 1 / sqrt(mean((xtemp - mean(xtemp))^2))
+          x[,id] <- x[,id] * xproj[[k]]
+        } else {
+          xeig <- eigen(crossprod(xtemp - matrix(colMeans(xtemp), nobs, nk, byrow = TRUE))/nobs, symmetric = TRUE)
+          xrank <- sum(xeig$values > xeig$values[1] * nk * .Machine$double.eps)
+          xproj[[k]] <- xeig$vectors[,1:xrank,drop=FALSE] %*% diag(1/sqrt(xeig$values[1:xrank]), xrank, xrank)
+          if(xrank < nk){
+            xproj[[k]] <- cbind(xproj[[k]], matrix(0.0, nk, nk - xrank))
+          }
+          x[,id] <- x[,id] %*% xproj[[k]]
+        }
+      }
+    } # end if(orthogonalize)
     
     ### check family
     if(family$family == "gaussian"){
@@ -556,6 +583,35 @@ grpnet.default <-
     
     ######***######   POST-PROCESSING   ######***######
     
+    ### orthognalize?
+    if(orthogonalize){
+      if(family$family == "multinomial"){
+        for(k in 1:ngrps){
+          id <- which(group == k)
+          nk <- length(id)
+          if(nk == 1L){
+            for(l in 1:nlev){
+              res$betas[[l]][id,] <- res$betas[[l]][id,] * xproj[[k]]
+            }
+          } else {
+            for(l in 1:nlev){
+              res$betas[[l]][id,] <- xproj[[k]] %*% res$betas[[l]][id,]
+            }
+          }
+        }
+      } else {
+        for(k in 1:ngrps){
+          id <- which(group == k)
+          nk <- length(id)
+          if(nk == 1L){
+            res$betas[id,] <- res$betas[id,] * xproj[[k]]
+          } else {
+            res$betas[id,] <- xproj[[k]] %*% res$betas[id,]
+          }
+        }
+      } # end if(family == "multinomial")
+    } # end if(orthogonalize)
+    
     ## name coefficients
     if(family$family != "multinomial"){
       rownames(res$betas) <- xnames
@@ -568,6 +624,7 @@ grpnet.default <-
                  gamma = gamma,
                  theta = theta,
                  standardize = standardize,
+                 orthogonalize = orthogonalize,
                  intercept = intercept,
                  thresh = thresh,
                  maxit = maxit)
@@ -576,6 +633,9 @@ grpnet.default <-
     if(intercept){
       ingroup <- c(0, ingroup)
       ngrps <- ngrps + 1L
+      thenames <- names(res$pw)
+      res$pw <- c(0, res$pw)
+      names(res$pw) <- c("(Intercept)", thenames)
     }
     
     ## collect results
@@ -590,6 +650,7 @@ grpnet.default <-
                 df = res$edfs,
                 nzgrp = res$nzgrps,
                 nzcoef = res$nzcoef,
+                xsd = res$pw,
                 ylev = ylev,
                 nobs = nobs,
                 group = ingroup,

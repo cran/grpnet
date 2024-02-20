@@ -6,12 +6,13 @@ predict.grpnet <-
            newx,
            newdata,
            s = NULL,
-           type = c("link", "response", "class", "terms", "importance", 
-                    "coefficients", "nonzero", "groups", "ncoefs", "ngroups", "norm"),
+           type = c("link", "response", "class", "terms", 
+                    "importance", "coefficients", "nonzero", "groups", 
+                    "ncoefs", "ngroups", "norm", "znorm"),
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-09-06
+    # Updated: 2023-11-02
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -20,7 +21,7 @@ predict.grpnet <-
     if(!inherits(object, "grpnet")) stop("Input 'object' must be of class 'grpnet'")
   
     ### check type
-    thetypes <- c("link", "response", "class", "terms", "importance", "coefficients", "nonzero", "groups", "ncoefs", "ngroups", "norm")
+    thetypes <- c("link", "response", "class", "terms", "importance", "coefficients", "nonzero", "groups", "ncoefs", "ngroups", "norm", "znorm")
     family <- object$family$family
     type <- pmatch(as.character(type[1]), thetypes)
     if(is.na(type)) stop("Invalid 'type' input")
@@ -58,7 +59,7 @@ predict.grpnet <-
     }
     
     ### l2norm
-    if(type %in% c("groups", "ngroups", "norm")){
+    if(type %in% c("groups", "ngroups", "norm", "znorm")){
       if(family == "multinomial"){
         l2norm <- function(x) sum(x^2)
       } else {
@@ -92,8 +93,8 @@ predict.grpnet <-
       }
     }
     
-    ### type == "norm"
-    if(type == "norm"){
+    ### type == "norm" or "znorm"
+    if(type %in% c("norm", "znorm")){
       coefs <- coef.grpnet(object = object, s = s)
       if(family == "multinomial"){
         norms <- sqrt(Reduce("+", lapply(coefs, function(x) apply(x, 2, grpnorm))))
@@ -106,7 +107,11 @@ predict.grpnet <-
         norms <- c(norms)
         names(norms) <- object$term.labels
       }
-      return(norms)
+      if(type == "znorm"){
+        return(norms * object$xsd)
+      } else {
+        return(norms)
+      }
     }
     
     

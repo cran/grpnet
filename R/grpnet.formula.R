@@ -18,12 +18,13 @@ grpnet.formula <-
            gamma = ifelse(penalty == "MCP", 3, 4),
            theta = 1,
            standardize = TRUE,
+           orthogonalize = FALSE,
            thresh = 1e-04,
            maxit = 1e05,
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-09-05
+    # Updated: 2024-02-15
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -120,6 +121,7 @@ grpnet.formula <-
                           gamma = gamma,
                           theta = theta,
                           standardize = standardize,
+                          orthogonalize = orthogonalize,
                           intercept = intercept,
                           thresh = thresh,
                           maxit = maxit)

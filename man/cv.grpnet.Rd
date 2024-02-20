@@ -162,9 +162,9 @@ Nathaniel E. Helwig <helwig@umn.edu>
 # load data
 data(auto)
 
-# 10-fold cv (formula method, response = mpg)
+# 5-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, alpha = 1)
+mod <- cv.grpnet(mpg ~ ., data = auto, nfolds = 5, alpha = 1)
 
 # print min and 1se solution info
 mod

@@ -22,11 +22,11 @@ print.grpnet <-
   } # end print.grpnet
 
 plot.grpnet <-
-  function(x, type = c("coef", "norm", "imp"), 
+  function(x, type = c("coef", "imp", "norm", "znorm"), 
            newx, newdata, intercept = FALSE,
            color.by.group = TRUE, col = NULL, ...){
     int <- ifelse(x$args$intercept && !intercept, 1, 0)
-    types <- c("coef", "norm", "imp")
+    types <- c("coef", "imp", "norm", "znorm")
     type <- pmatch(type[1], types)
     if(is.na(type)) stop("Invalid 'type' input")
     type <- types[type]
@@ -75,7 +75,7 @@ plot.grpnet <-
           lines(log(x$lambda), res[k,], col = colors[k])
         }
       }
-    } else if(type == "norm"){
+    } else if(type %in% c("norm", "znorm")){
       colors <- col
       index <- (1+int):nrow(res)
       plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),

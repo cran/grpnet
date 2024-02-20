@@ -6,12 +6,13 @@ predict.cv.grpnet <-
            newx,
            newdata,
            s = c("lambda.min", "lambda.1se"),
-           type = c("link", "response", "class", "terms", "importance", 
-                    "coefficients", "nonzero", "groups", "ncoefs", "ngroups", "norm"),
+           type = c("link", "response", "class", "terms", 
+                    "importance", "coefficients", "nonzero", "groups", 
+                    "ncoefs", "ngroups", "norm", "znorm"),
            ...){
     # predict from a fit cv.grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-09-06
+    # Updated: 2023-11-02
     
     
     ######***######   INITIAL CHECKS   ######***######

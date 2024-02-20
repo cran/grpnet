@@ -47,7 +47,7 @@ Given a vector of function realizations \eqn{f}, suppose that \eqn{f = X \beta},
 
 Consider the spectral parameterization of the form \eqn{f = Z \alpha} where
 \deqn{Z = X Q^{-1/2}}
-is the regularized spline basis (that is returned by this function), and \eqn{\alpha = Q^{1/2} \beta} are the reparameterized coefficients. Note that \eqn{X \beta = Z \alpha} and \eqn{\beta^\top Q \beta = \alpha^\top \alpha}, so the spectral parameterization absorbs the penalty into the coefficients (see Helwig, 2021).
+is the regularized spline basis (that is returned by this function), and \eqn{\alpha = Q^{1/2} \beta} are the reparameterized coefficients. Note that \eqn{X \beta = Z \alpha} and \eqn{\beta^\top Q \beta = \alpha^\top \alpha}, so the spectral parameterization absorbs the penalty into the coefficients (see Helwig, 2021, 2024).
 
 Syntax of this function is designed to mimic the syntax of the \code{\link[splines]{bs}} function.
 }
@@ -65,6 +65,8 @@ Returns a basis function matrix of dimension \code{n} by \code{df} (plus 1 if an
 Helwig, N. E. (2017). Regression with ordered predictors via ordinal smoothing splines. Frontiers in Applied Mathematics and Statistics, 3(15), 1-13. \doi{10.3389/fams.2017.00015}
 
 Helwig, N. E. (2021). Spectrally sparse nonparametric regression via elastic net regularized smoothers. Journal of Computational and Graphical Statistics, 30(1), 182-191. \doi{10.1080/10618600.2020.1806855}
+
+Helwig, N. E. (2024). Precise tensor product smoothing via spectral splines. Stats, 7(1), 34-53. \doi{10.3390/stats7010003}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

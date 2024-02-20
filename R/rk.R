@@ -4,7 +4,7 @@ rk <-
            periodic = FALSE, xlev = levels(x)){
     # reproducing kernel spline basis
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2023-09-06
+    # 2023-09-19
     
     
     ######***######   NOMINAL BASIS   ######***######
@@ -189,6 +189,7 @@ rk <-
     }
     
     # check periodic
+    if(is.null(periodic)) periodic <- FALSE
     periodic <- as.logical(periodic[1])
     
     # bernoulli polynomial function

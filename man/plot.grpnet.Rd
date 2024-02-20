@@ -8,7 +8,7 @@ Plot Coefficients for grpnet Fits
 Creates a profile plot of the coefficient paths for a fit group elastic net regularized GLM (grpnet) object.
 }
 \usage{
-\method{plot}{grpnet}(x, type = c("coef", "norm", "imp"),
+\method{plot}{grpnet}(x, type = c("coef", "imp", "norm", "znorm"),
      newx, newdata, intercept = FALSE,
      color.by.group = TRUE, col = NULL, ...)
 }
@@ -18,7 +18,7 @@ Creates a profile plot of the coefficient paths for a fit group elastic net regu
 Object of class "grpnet"
 }
   \item{type}{
-What to plot on the Y-axis: "coef" for coefficient values, "norm" for L2 norm of coefficients for each group, or "imp" for importance of each group's contribution. 
+What to plot on the Y-axis: "coef" for coefficient values, "imp" for importance of each group's contribution, "norm" for L2 norm of coefficients for each group, or "znorm" for L2 norm of standardized coefficients for each group. 
 }
   \item{newx}{
 Matrix of new \code{x} scores for prediction (default S3 method). Ignored unless \code{type = "imp"}.

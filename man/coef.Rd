@@ -81,9 +81,9 @@ coef(mod, s = c(1.5, 1, 0.5))
 # load data
 data(auto)
 
-# 10-fold cv (formula method, response = mpg)
+# 5-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, alpha = 1)
+mod <- cv.grpnet(mpg ~ ., data = auto, nfolds = 5, alpha = 1)
 
 # extract coefs for "min" solution (output = 12 x 1 matrix)
 coef(mod)

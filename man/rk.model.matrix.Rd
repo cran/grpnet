@@ -39,6 +39,8 @@ The design matrix corresponding to the input formula and data, which has the fol
 Helwig, N. E. (2017). Regression with ordered predictors via ordinal smoothing splines. Frontiers in Applied Mathematics and Statistics, 3(15), 1-13. \doi{10.3389/fams.2017.00015}
 
 Helwig, N. E. (2021). Spectrally sparse nonparametric regression via elastic net regularized smoothers. Journal of Computational and Graphical Statistics, 30(1), 182-191. \doi{10.1080/10618600.2020.1806855}
+
+Helwig, N. E. (2024). Precise tensor product smoothing via spectral splines. Stats, 7(1), 34-53. \doi{10.3390/stats7010003}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

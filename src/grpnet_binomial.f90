@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-08-28
+!   Date: 2023-11-01
 
 
 ! INPUTS/OUTPUTS
@@ -17,7 +17,7 @@
 !   ngrps = number of groups (K)
 !   gsize = number of coefs in each group (K)
 !           note: (P.1, P.2, ..., P.K) with sum(P.k) = P
-!   pw = penalty weight vector (K)
+!   pw = penalty weight vector (K)   (outputs xsdev)
 !        note: set pw(k) = 0 to leave k-th group unpenalized
 !   alpha = weight for L1 and L2 penalities (alpha = 1 for lasso/mcp/scad, alpha = 0 for ridge)
 !           note: setting alpha between (0,1) gives elastic net
@@ -467,7 +467,7 @@ SUBROUTINE grpnet_binomial(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
         mu = 1.0D0 / (1.0D0 + EXP(-off))
     END IF
     CALL grpnet_binomial_dev(nobs, y, mu, w**2, nulldev)
-
+    pw = xsdev
 ! --------------- POST PROCESSING --------------- !
 
 END SUBROUTINE

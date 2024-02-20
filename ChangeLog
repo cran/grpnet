@@ -1,5 +1,40 @@
 
-Version 0.2
+Version 0.3   (2024-02-20)
+
+   1) Added orthogonalization option to grpnet
+	* Use 'orthogonalize = TRUE' to groupwise orthogonalize design matrices
+	* Default is still 'standardize = TRUE' (and 'orthogonalize = FALSE')
+	* Now three possible options: unstandardized, standardized, orthogonalized
+
+   2) Improvement to rk() and rk.model.matrix for periodic splines
+	* Periodicity is specified via a named list with T/F for each entry 
+	* Previously it was necessary to include all variables in list
+	* Now any variable excluded from the list automatically gets F entry
+
+   3) Additional output included for grpnet() function
+	* New returned value: "xsd" gives the groupwise standard deviation of 'x'
+	* The "xsd" values are used to standardize 'x' (when standardize = TRUE)
+	* The "xsd" values are used by predict.grpnet() when type = "znorm"
+
+   4) Expanded functionality for predict.grpnet() and predict.cv.grpnet()
+	* New prediction type: "znorm" gives L2 norm of standardized coefs
+	* Equivalent to multiplying the "norm" type prediction by "xsd"
+	* "znorm" should be preferred over "norm" when predictor metrics differ
+
+   5) Inconsequential updates to underlying Fortran code
+	* Previously the "pw" argument was only used to input penalty weights
+	* Now the "pw" argument is used to output "xsd" (x standard deviation)
+	* This output is now returned as a part of grpnet objects ($xsd)
+
+   6) Additional option ("znorm") for plot.grpnet() function
+
+   7) Slight update to package title and description. 
+
+   8) Added an additional reference to rk() and rk.model.matrix() help files
+
+
+
+Version 0.2   (2023-09-08)
 
    1) Bug Fix (penalty.factor)
 	* In ver 0.1 penalty.factor was not being passed to internal Fortran routines

@@ -12,8 +12,9 @@ Obtain predictions from a cross-validated group elastic net regularized GLM (cv.
         newx,
         newdata,
         s = c("lambda.min", "lambda.1se"),
-        type = c("link", "response", "class", "terms", "importance", 
-                 "coefficients", "nonzero", "groups", "ncoefs", "ngroups", "norm"),
+        type = c("link", "response", "class", "terms", 
+                 "importance", "coefficients", "nonzero", "groups", 
+                 "ncoefs", "ngroups", "norm", "znorm"),
         ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -31,7 +32,7 @@ Data frame of new \code{data} scores for prediction (S3 "formula" method). Must 
 Lambda value(s) at which predictions should be obtained. Can input a character ("lambda.min" or "lambda.1se") or a numeric vector. Default of "lambda.min" uses the \code{lambda} value that minimizes the mean cross-validated error. 
 }
   \item{type}{
-Type of prediction to return. "link" gives predictions on the link scale (\eqn{\eta}). "response" gives predictions on the mean scale (\eqn{\mu}). "terms" gives the predictions for each term (group) in the model (\eqn{\eta_k}). "class" gives predicted class labels (for "binomial" and "multinomial" families). "coefficients" returns the coefficients used for predictions. "nonzero" returns a list giving the indices of non-zero coefficients for each \code{s}. "ncoefs" returns the number of non-zero coefficients for each \code{s}. "ngroups" returns the number of non-zero groups for each \code{s}. "norm" returns the L2 norm of each group's coefficients for each \code{s}.
+Type of prediction to return. "link" gives predictions on the link scale (\eqn{\eta}). "response" gives predictions on the mean scale (\eqn{\mu}). "terms" gives the predictions for each term (group) in the model (\eqn{\eta_k}). "class" gives predicted class labels (for "binomial" and "multinomial" families). "coefficients" returns the coefficients used for predictions. "nonzero" returns a list giving the indices of non-zero coefficients for each \code{s}. "ncoefs" returns the number of non-zero coefficients for each \code{s}. "ngroups" returns the number of non-zero groups for each \code{s}. "norm" returns the L2 norm of each group's (raw) coefficients for each \code{s}. "znorm" returns the L2 norm of each group's standardized coefficients for each \code{s}.
 }
   \item{...}{
 Additional arguments (ignored)

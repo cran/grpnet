@@ -4,10 +4,10 @@
 \alias{grpnet.formula}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Fit a Group Elastic Net Regularized GLM
+Fit a Group Elastic Net Regularized GLM/GAM
 }
 \description{
-Fits generalized linear models with a group elastic net penalty. Predictor groups can be manually input (default S3 method) or inferred from the model (S3 "formula" method). The regularization path is computed at a data-generated (default) or user-provided sequence of lambda values. }
+Fits generalized linear/additive models with a group elastic net penalty. Predictor groups can be manually input (default S3 method) or inferred from the model (S3 "formula" method). The regularization path is computed at a data-generated (default) or user-provided sequence of lambda values. }
 \usage{
 grpnet(x, \dots)
 
@@ -26,7 +26,8 @@ grpnet(x, \dots)
        penalty = c("LASSO", "MCP", "SCAD"),
        gamma = ifelse(penalty == "MCP", 3, 4),
        theta = 1,
-       standardize = TRUE, 
+       standardize = TRUE,
+       orthogonalize = FALSE,
        intercept = TRUE, 
        thresh = 1e-04, 
        maxit = 1e05, 
@@ -48,6 +49,7 @@ grpnet(x, \dots)
        gamma = ifelse(penalty == "MCP", 3, 4),
        theta = 1,
        standardize = TRUE,
+       orthogonalize = FALSE,
        thresh = 1e-04,
        maxit = 1e05,
        ...)
@@ -108,7 +110,10 @@ Penalty hyperparameter that satisfies \eqn{\gamma > 1} for MCP and \eqn{\gamma >
 Additional ("size") parameter for negative binomial responses, where the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
 }
   \item{standardize}{
-Logical indicating whether the predictors should be groupwise standardized. If \code{TRUE} (default), each column of \code{x} is mean-centered and each predictor group is scaled to have a mean-square of one before fitting the model. Regardless of whether standardization is used, the coefficients are always returned on the original data scale.
+Logical indicating whether the predictors should be groupwise standardized. If \code{TRUE} (default), each column of \code{x} is mean-centered and each predictor group's design matrix is scaled to have a mean-square of one before fitting the model. Regardless of whether standardization is used, the coefficients are always returned on the original data scale.
+}
+\item{orthogonalize}{
+Logical indicating whether the predictors should be groupwise orthogonalized. If \code{TRUE}, each predictor group's design matrix is orthonormalized (i.e., \eqn{\mathbf{X}_k^\top \mathbf{X}_k = \mathbf{I}_k}) before fitting the model. Regardless of whether orthogonalization is used, the coefficients are always returned on the original data scale.
 }
   \item{intercept}{
 Logical indicating whether an intercept term should be included in the model. Note that the intercept is always unpenalized.   
@@ -174,6 +179,7 @@ An object of class \code{"grpnet"} with the following elements:
 \item{df }{effective degrees of freedom for each \code{lambda}}
 \item{nzgrp }{number of non-zero groups for each \code{lambda}}
 \item{nzcoef }{number of non-zero coefficients for each \code{lambda}}
+\item{xsd }{standard deviation of x for each group}
 \item{ylev }{levels of response variable (only for binomial and multinomial families)}
 \item{nobs }{number of observations}
 \item{group}{group label vector}
@@ -198,7 +204,6 @@ Nathaniel E. Helwig <helwig@umn.edu>
 \note{
 The syntax of (the default S3 method for) this function closely mimics that of the \code{glmnet} function in the \bold{glmnet} package (Friedman, Hastie, & Tibshirani, 2010). 
 }
-
 
 \section{S3 "formula" method}{
 \bold{Important}: When using the S3 "formula" method, the S3 "predict" method forms the model matrix for the predictions by applying the model formula to the new data. As a result, to ensure that the corresponding S3 "predict" method works correctly, some formulaic features should be avoided. 

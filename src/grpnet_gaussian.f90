@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-08-28
+!   Date: 2023-11-01
 
 
 ! INPUTS/OUTPUTS
@@ -17,7 +17,7 @@
 !   ngrps = number of groups (K)
 !   gsize = number of coefs in each group (K)
 !           note: (P.1, P.2, ..., P.K) with sum(P.k) = P
-!   pw = penalty weight vector (K)
+!   pw = penalty weight vector (K)   (outputs xsdev)
 !        note: set pw(k) = 0 to leave k-th group unpenalized
 !   alpha = weight for L1 and L2 penalities (alpha = 1 for lasso/mcp/scad, alpha = 0 for ridge)
 !           note: setting alpha between (0,1) gives elastic net
@@ -404,6 +404,7 @@ SUBROUTINE grpnet_gaussian(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     ELSE
         nulldev = SUM((y - off)**2)
     END IF
+    pw = xsdev
 ! --------------- POST PROCESSING --------------- !
 
 
