@@ -2,7 +2,7 @@ rk.model.matrix <-
   function(object, data = environment(object), ...){
     # reproducing kernel model matrix
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2023-09-06
+    # 2024-04-10
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -40,6 +40,13 @@ rk.model.matrix <-
       factors <- factors[-1,,drop=FALSE]
     } else if(response > 0){
       stop("Input 'object' formula should be of the form:\n y ~ . (one response)\n   ~ . (no response)")
+    }
+    
+    ### convert characters to factors
+    for(j in 1:nvars){
+      if(is.character(data[,variables[j]])){
+        data[,variables[j]] <- as.factor(data[,variables[j]])
+      }
     }
     
     

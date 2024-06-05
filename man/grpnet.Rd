@@ -24,10 +24,10 @@ grpnet(x, \dots)
        lambda = NULL, 
        penalty.factor = NULL,
        penalty = c("LASSO", "MCP", "SCAD"),
-       gamma = ifelse(penalty == "MCP", 3, 4),
+       gamma = 4,
        theta = 1,
-       standardize = TRUE,
-       orthogonalize = FALSE,
+       standardized = !orthogonalized,
+       orthogonalized = TRUE,
        intercept = TRUE, 
        thresh = 1e-04, 
        maxit = 1e05, 
@@ -46,10 +46,10 @@ grpnet(x, \dots)
        lambda = NULL,
        penalty.factor = NULL,
        penalty = c("LASSO", "MCP", "SCAD"),
-       gamma = ifelse(penalty == "MCP", 3, 4),
+       gamma = 4,
        theta = 1,
-       standardize = TRUE,
-       orthogonalize = FALSE,
+       standardized = !orthogonalized,
+       orthogonalized = TRUE,
        thresh = 1e-04,
        maxit = 1e05,
        ...)
@@ -109,11 +109,11 @@ Penalty hyperparameter that satisfies \eqn{\gamma > 1} for MCP and \eqn{\gamma >
   \item{theta}{
 Additional ("size") parameter for negative binomial responses, where the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
 }
-  \item{standardize}{
-Logical indicating whether the predictors should be groupwise standardized. If \code{TRUE} (default), each column of \code{x} is mean-centered and each predictor group's design matrix is scaled to have a mean-square of one before fitting the model. Regardless of whether standardization is used, the coefficients are always returned on the original data scale.
+  \item{standardized}{
+Logical indicating whether the predictors should be groupwise standardized. If \code{TRUE}, each column of \code{x} is mean-centered and each predictor group's design matrix is scaled to have a mean-square of one before fitting the model. Regardless of whether standardization is used, the coefficients are always returned on the original data scale.
 }
-\item{orthogonalize}{
-Logical indicating whether the predictors should be groupwise orthogonalized. If \code{TRUE}, each predictor group's design matrix is orthonormalized (i.e., \eqn{\mathbf{X}_k^\top \mathbf{X}_k = \mathbf{I}_k}) before fitting the model. Regardless of whether orthogonalization is used, the coefficients are always returned on the original data scale.
+\item{orthogonalized}{
+Logical indicating whether the predictors should be groupwise orthogonalized. If \code{TRUE} (default), each predictor group's design matrix is orthonormalized (i.e., \eqn{\mathbf{X}_k^\top \mathbf{X}_k = n \mathbf{I}_k}) before fitting the model. Regardless of whether orthogonalization is used, the coefficients are always returned on the original data scale.
 }
   \item{intercept}{
 Logical indicating whether an intercept term should be included in the model. Note that the intercept is always unpenalized.   
@@ -195,6 +195,8 @@ An object of class \code{"grpnet"} with the following elements:
 Breheny, P., & Huang, J. (2015). Group descent algorithms for nonconvex penalized linear and logistic regression models with grouped predictors. \emph{Statistics and Computing, 25}, 173-187. \doi{10.1007/s11222-013-9424-2}
 
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
+
+Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
 
 Yang, Y., & Zou, H. (2015). A fast unified algorithm for solving group-lasso penalize learning problems. \emph{Statistics and Computing, 25}, 1129-1141. \doi{10.1007/s11222-014-9498-5}
 }

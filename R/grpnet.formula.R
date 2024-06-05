@@ -15,16 +15,16 @@ grpnet.formula <-
            lambda = NULL,
            penalty.factor = NULL,
            penalty = c("LASSO", "MCP", "SCAD"),
-           gamma = ifelse(penalty == "MCP", 3, 4),
+           gamma = 4,
            theta = 1,
-           standardize = TRUE,
-           orthogonalize = FALSE,
+           standardized = !orthogonalized,
+           orthogonalized = TRUE,
            thresh = 1e-04,
            maxit = 1e05,
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-02-15
+    # Updated: 2024-05-28
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -120,8 +120,8 @@ grpnet.formula <-
                           penalty = penalty,
                           gamma = gamma,
                           theta = theta,
-                          standardize = standardize,
-                          orthogonalize = orthogonalize,
+                          standardized = standardized,
+                          orthogonalized = orthogonalized,
                           intercept = intercept,
                           thresh = thresh,
                           maxit = maxit)

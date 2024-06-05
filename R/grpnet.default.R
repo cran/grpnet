@@ -15,17 +15,17 @@ grpnet.default <-
            lambda = NULL,
            penalty.factor = NULL,
            penalty = c("LASSO", "MCP", "SCAD"),
-           gamma = ifelse(penalty == "MCP", 3, 4),
+           gamma = 4,
            theta = 1,
-           standardize = TRUE,
-           orthogonalize = FALSE,
+           standardized = !orthogonalized,
+           orthogonalized = TRUE,
            intercept = TRUE,
            thresh = 1e-04,
            maxit = 1e05,
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-02-15
+    # Updated: 2024-05-28
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -156,6 +156,7 @@ grpnet.default <-
     if(family$family == "gaussian"){
       y <- as.numeric(y)
     } else if(family$family == "binomial"){
+      if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
         #if(nlevels(y) != 2L) stop("Input 'y' must be (coercible into) a factor with two levels when family = 'binomial'.")
         ylev <- levels(y)
@@ -172,6 +173,7 @@ grpnet.default <-
       }
       if(is.null(ylev)) ylev <- c(0, 1)
     } else if(family$family == "multinomial"){
+      if(is.character(y)) y <- as.factor(y)
       yorig <- y
       if(is.factor(y)){
         yfac <- y
@@ -293,13 +295,13 @@ grpnet.default <-
       assign(".Theta", theta, envir = env)
     }
     
-    ### standardize
-    standardize <- as.logical(standardize[1])
-    if(!any(standardize == c(TRUE, FALSE))) stop("Input 'standardize' must be TRUE or FALSE")
+    ### standardized
+    standardized <- as.logical(standardized[1])
+    if(!any(standardized == c(TRUE, FALSE))) stop("Input 'standardized' must be TRUE or FALSE")
     
-    ### orthogonalize
-    orthogonalize <- as.logical(orthogonalize[1])
-    if(!any(orthogonalize == c(TRUE, FALSE))) stop("Input 'orthogonalize' must be TRUE or FALSE")
+    ### orthogonalized
+    orthogonalized <- as.logical(orthogonalized[1])
+    if(!any(orthogonalized == c(TRUE, FALSE))) stop("Input 'orthogonalized' must be TRUE or FALSE")
     
     ### check intercept
     intercept <- as.logical(intercept[1])
@@ -317,8 +319,8 @@ grpnet.default <-
     
     ######***######   WORK   ######***######
     
-    ### orthogonalize?
-    if(orthogonalize){
+    ### orthogonalized?
+    if(orthogonalized){
       xproj <- vector("list", ngrps)
       for(k in 1:ngrps){
         id <- which(group == k)
@@ -337,7 +339,7 @@ grpnet.default <-
           x[,id] <- x[,id] %*% xproj[[k]]
         }
       }
-    } # end if(orthogonalize)
+    } # end if(orthogonalized)
     
     ### check family
     if(family$family == "gaussian"){
@@ -361,7 +363,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = rep(0.0, nlambda),
                       betas = matrix(0.0, nrow = nvars, ncol = nlambda),
@@ -393,7 +395,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = rep(0.0, nlambda),
                       betas = matrix(0.0, nrow = nvars, ncol = nlambda),
@@ -426,7 +428,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = matrix(0.0, nrow = nlev, ncol = nlambda),
                       betas = array(0.0, dim = c(nvars, nlev, nlambda)),
@@ -470,7 +472,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = rep(0.0, nlambda),
                       betas = matrix(0.0, nrow = nvars, ncol = nlambda),
@@ -502,7 +504,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = rep(0.0, nlambda),
                       betas = matrix(0.0, nrow = nvars, ncol = nlambda),
@@ -535,7 +537,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = rep(0.0, nlambda),
                       betas = matrix(0.0, nrow = nvars, ncol = nlambda),
@@ -567,7 +569,7 @@ grpnet.default <-
                       gamma = gamma,
                       eps = thresh,
                       maxit = maxit,
-                      standardize = as.integer(standardize),
+                      standardize = as.integer(standardized),
                       intercept = as.integer(intercept),
                       ibeta = rep(0.0, nlambda),
                       betas = matrix(0.0, nrow = nvars, ncol = nlambda),
@@ -584,7 +586,7 @@ grpnet.default <-
     ######***######   POST-PROCESSING   ######***######
     
     ### orthognalize?
-    if(orthogonalize){
+    if(orthogonalized){
       if(family$family == "multinomial"){
         for(k in 1:ngrps){
           id <- which(group == k)
@@ -610,7 +612,7 @@ grpnet.default <-
           }
         }
       } # end if(family == "multinomial")
-    } # end if(orthogonalize)
+    } # end if(orthogonalized)
     
     ## name coefficients
     if(family$family != "multinomial"){
@@ -623,8 +625,8 @@ grpnet.default <-
                  penalty = penalty,
                  gamma = gamma,
                  theta = theta,
-                 standardize = standardize,
-                 orthogonalize = orthogonalize,
+                 standardized = standardized,
+                 orthogonalized = orthogonalized,
                  intercept = intercept,
                  thresh = thresh,
                  maxit = maxit)

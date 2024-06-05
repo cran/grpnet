@@ -18,6 +18,7 @@ cv.grpnet(x, \dots)
           weights = NULL,
           offset = NULL,
           alpha = c(0.01, 0.25, 0.5, 0.75, 1),
+          gamma = c(3, 4, 5),
           type.measure = NULL,
           nfolds = 10, 
           foldid = NULL,
@@ -33,6 +34,7 @@ cv.grpnet(x, \dots)
           weights = NULL,
           offset = NULL,
           alpha = c(0.01, 0.25, 0.5, 0.75, 1),
+          gamma = c(3, 4, 5),
           type.measure = NULL,
           nfolds = 10, 
           foldid = NULL, 
@@ -71,6 +73,9 @@ Optional vector of length \eqn{n} with an a priori known term to be included in 
   \item{alpha}{
 Scalar or vector specifying the elastic net tuning parameter \eqn{\alpha}. If \code{alpha} is a vector (default), then (a) the same \code{foldid} is used to compute the cross-validation error for each \eqn{\alpha}, and (b) the solution for the optimal \eqn{\alpha} is returned. 
 }
+\item{gamma}{
+Scalar or vector specifying the penalty hyperparameter \eqn{\gamma} for MCP or SCAD. If \code{gamma} is a vector (default), then (a) the same \code{foldid} is used to compute the cross-validation error for each \eqn{\gamma}, and (b) the solution for the optimal \eqn{\gamma} is returned. 
+}   
   \item{type.measure}{
 Loss function for cross-validation. Options include: \code{"deviance"} for model deviance, \code{"mse"} for mean squared error, \code{"mae"} for mean absolute error, or \code{"class"} for classification error. Note that \code{"class"} is only available for binomial and multinomial families. The default is classification error (for binomial and multinomial) or deviance (others).
 }
@@ -126,12 +131,14 @@ which is the classic definition of the standard error of the mean.
 \item{index}{two-element vector giving the indices of \code{lambda.min} and \code{lambda.1se} in the \code{lambda} vector, i.e., \code{c(minid, se1id)} as defined in the Note}
 \item{type.measure}{loss function for cross-validation (used for plot label)}
 \item{call}{matched call}
-\item{alpha}{input \code{alpha} vector and min(cvm) for each \code{alpha} (if \code{alpha} is a vector)}
+\item{tune}{data frame containing the tuning results, i.e., min(cvm) for each combo of \code{alpha} and/or \code{gamma}}
 }
 \references{
 Breheny, P., & Huang, J. (2015). Group descent algorithms for nonconvex penalized linear and logistic regression models with grouped predictors. \emph{Statistics and Computing, 25}, 173-187. \doi{10.1007/s11222-013-9424-2}
 
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
+
+Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
 
 Yang, Y., & Zou, H. (2015). A fast unified algorithm for solving group-lasso penalize learning problems. \emph{Statistics and Computing, 25}, 1129-1141. \doi{10.1007/s11222-014-9498-5}
 }

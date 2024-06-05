@@ -2,10 +2,10 @@
 \alias{plot.grpnet}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{
-Plot Coefficients for grpnet Fits
+Plot Regularization Path for grpnet Fits
 }
 \description{
-Creates a profile plot of the coefficient paths for a fit group elastic net regularized GLM (grpnet) object.
+Creates a profile plot of the reguarlization paths for a fit group elastic net regularized GLM (grpnet) object.
 }
 \usage{
 \method{plot}{grpnet}(x, type = c("coef", "imp", "norm", "znorm"),
@@ -47,6 +47,8 @@ Produces a profile plot showing the requested type (y-axis) as a function of \co
 }
 \references{
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
+
+Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

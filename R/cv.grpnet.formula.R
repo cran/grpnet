@@ -8,6 +8,7 @@ cv.grpnet.formula <-
            weights = NULL,
            offset = NULL,
            alpha = c(0.01, 0.25, 0.5, 0.75, 1),
+           gamma = c(3, 4, 5),
            type.measure = NULL,
            nfolds = 10, 
            foldid = NULL, 
@@ -18,7 +19,7 @@ cv.grpnet.formula <-
            ...){
     # k-fold cross-validation for grpnet (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-09-05
+    # Updated: 2024-06-04
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -96,6 +97,7 @@ cv.grpnet.formula <-
                                weights = weights,
                                offset = offset,
                                alpha = alpha,
+                               gamma = gamma,
                                type.measure = type.measure,
                                nfolds = nfolds, 
                                foldid = foldid,
@@ -128,6 +130,7 @@ cv.grpnet.formula <-
                     weights = weights,
                     offset = offset,
                     alpha = alpha,
+                    gamma = gamma,
                     type.measure = type.measure,
                     nfolds = nfolds, 
                     foldid = foldid,

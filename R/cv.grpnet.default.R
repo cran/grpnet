@@ -8,6 +8,7 @@ cv.grpnet.default <-
            weights = NULL,
            offset = NULL,
            alpha = c(0.01, 0.25, 0.5, 0.75, 1),
+           gamma = c(3, 4, 5),
            type.measure = NULL,
            nfolds = 10, 
            foldid = NULL,
@@ -17,7 +18,7 @@ cv.grpnet.default <-
            verbose = interactive(), ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-09-04
+    # Updated: 2024-06-04
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -80,6 +81,7 @@ cv.grpnet.default <-
     if(family == "gaussian"){
       y <- as.numeric(y)
     } else if(family == "binomial"){
+      if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
         #if(nlevels(y) != 2L) stop("Input 'y' must be (coercible into) a factor with two levels when family = 'binomial'.")
         ylev <- levels(y)
@@ -96,6 +98,7 @@ cv.grpnet.default <-
       if(is.null(ylev)) ylev <- c(0, 1)
       yfac <- factor(ifelse(y <= 0.5, ylev[1], ylev[2]), levels = ylev)
     } else if(family == "multinomial"){
+      if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
         yfac <- y
         yint <- as.integer(y)
@@ -161,6 +164,31 @@ cv.grpnet.default <-
     if(any(alpha < 0 | alpha > 1)) stop("Input 'alpha' must satisfy:  0 <= alpha <= 1")
     nalpha <- length(alpha)
     
+    ### get penalty
+    penalty <- args$penalty
+    if(is.null(penalty)){
+      penalty <- 1L
+    } else {
+      if(is.integer(penalty)){
+        if(penalty < 1L || penalty > 3L) stop("Invalid 'penalty': must be 1 (LASSO), 2 (MCP), or 3 (SCAD)")
+      } else {
+        penalty <- toupper(as.character(penalty))
+        penalty <- pmatch(penalty, c("LASSO", "MCP", "SCAD"))
+        if(is.na(penalty)) stop("Invalid 'penalty': must be 'LASSO', 'MCP', or 'SCAD'")
+      }
+    }
+    
+    ### check gamma
+    if(penalty > 1L){
+      gamma <- sort(unique(as.numeric(gamma)))
+      ngamma <- length(gamma)
+      lower <- ifelse(penalty == 2L, 1.0, 2.0)
+      if(any(gamma <= lower)) stop(paste0("Input 'gamma' must be greater than ", lower, " when penalty = '", penalty,"'"))
+    } else {
+      ngamma <- 1L
+      gamma <- 4
+    }
+    
     ### check type.measure
     if(is.null(type.measure)){
       type.measure <- ifelse(family %in% c("binomial", "multinomial"), "class", "deviance")
@@ -207,68 +235,75 @@ cv.grpnet.default <-
     if(!any(verbose == c(TRUE, FALSE))) stop("Input 'verbose' must be TRUE or FALSE")
     
     
-    ######***######   TUNE ALPHA   ######***######
+    ######***######   TUNE ALPHA AND/OR GAMMA   ######***######
     
-    if(nalpha > 1L){
+    if(nalpha > 1L | ngamma > 1L){
+      
+      ## initialize to hold results
       alpha <- rev(alpha)
-      alpha.tune <- data.frame(alpha = alpha, min.cvm = NA)
-      # fit with alpha[1]
-      if(verbose){
-        cat("alpha = ", formatC(alpha[1], format = "f", digits = 2), ":", sep = "")
-      }
-      best <- cv.grpnet.default(x = x, 
-                                y = y,
-                                group = group,
-                                weights = weights,
-                                offset = offset,
-                                alpha = alpha[1],
-                                type.measure = type.measure,
-                                nfolds = nfolds, 
-                                foldid = foldid,
-                                same.lambda = same.lambda,
-                                parallel = parallel, 
-                                cluster = cluster, 
-                                verbose = FALSE,
-                                ...)
-      bestmin <- best$cvm[best$index[1]]
-      alpha.tune[1,2] <- bestmin
-      if(verbose){
-        cat("   min(cvm) = ", bestmin, "\n", sep = "")
-      }
-      # loop thru alpha[k]
-      for(k in 2:nalpha){
-        if(verbose){
-          cat("alpha = ", formatC(alpha[k], format = "f", digits = 2), ":", sep = "")
-        }
-        res <- cv.grpnet.default(x = x, 
-                                 y = y,
-                                 group = group,
-                                 weights = weights,
-                                 offset = offset,
-                                 alpha = alpha[k],
-                                 type.measure = type.measure,
-                                 nfolds = nfolds, 
-                                 foldid = foldid,
-                                 same.lambda = same.lambda,
-                                 parallel = parallel, 
-                                 cluster = cluster, 
-                                 verbose = FALSE,
-                                 ...)
-        resmin <- res$cvm[res$index[1]]
-        alpha.tune[k,2] <- resmin
-        if(verbose){
-          cat("   min(cvm) = ", resmin, "\n", sep = "")
-        }
-        if(bestmin > resmin) {
-          best <- res
-          bestmin <- resmin
-        }
-      } # for(k in 2:nalpha)
-      best$alpha <- alpha.tune
+      tune.res <- expand.grid(alpha = alpha, gamma = gamma, cvm = NA)
+      if(penalty == 1L) tune.res$gamma <- NULL
+      
+      ## loop through alpha and gamma
+      counter <- 1L
+      for(k in 1:ngamma){
+        for(j in 1:nalpha){
+          
+          # print progress?
+          if(verbose){
+            if(penalty == 1L){
+              cat("alpha = ", formatC(alpha[j], format = "f", digits = 2), ":", sep = "")
+            } else {
+              cat("alpha = ", formatC(alpha[j], format = "f", digits = 2), 
+                  "  &  gamma = ", formatC(gamma[k], format = "f", digits = 2), ":", sep = "")
+            }
+          }
+          
+          # fit model
+          res <- cv.grpnet.default(x = x, 
+                                   y = y,
+                                   group = group,
+                                   weights = weights,
+                                   offset = offset,
+                                   alpha = alpha[j],
+                                   gamma = gamma[k],
+                                   type.measure = type.measure,
+                                   nfolds = nfolds, 
+                                   foldid = foldid,
+                                   same.lambda = same.lambda,
+                                   parallel = parallel, 
+                                   cluster = cluster, 
+                                   verbose = FALSE,
+                                   ...)
+          
+          # save results
+          resmin <- res$cvm[res$index[1]]
+          tune.res$cvm[counter] <- resmin
+          if(verbose){
+            cat("   min(cvm) = ", resmin, "\n", sep = "")
+          }
+          
+          # update best solution?
+          if((j == 1) && (k == 1)){
+            best <- res
+            bestmin <- best$cvm[best$index[1]]
+          } else if(bestmin > resmin) {
+            best <- res
+            bestmin <- resmin
+          }
+          
+          # update counter
+          counter <- counter + 1L
+          
+        } # end for(j in 1:nalpha)
+      } # end for(k in 1:ngamma)
+      
+      best$tune <- tune.res
       best$call <- cv.grpnet.call
       best$grpnet.fit$ylev <- ylev
       return(best)
-    } # end if(nalpha > 1L)
+      
+    } # end if(nalpha > 1L | ngamma > 1L)
     
     
     ######***######   PRE-PROCESSING   ######***######
@@ -287,6 +322,7 @@ cv.grpnet.default <-
                          weights = weights,
                          offset = offset, 
                          alpha = alpha,
+                         gamma = gamma, 
                          ...)
     if(grpnet.fit$args$intercept){
       grpnet.fit$group <- c(0, ingroup)
@@ -311,9 +347,10 @@ cv.grpnet.default <-
         
         # define parcvloss function
         parcvloss <-
-          function(testid, xmat, ymat, group, family, weights, offset, alpha, nlambda,
-                   lambda.min.ratio, lambda, penalty.factor, penalty, gamma, theta,
-                   standardize, intercept, thresh, maxit, type.measure, same.lambda, yfac){
+          function(testid, xmat, ymat, group, family, weights, offset, alpha, 
+                   nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
+                   gamma, theta, standardized, orthogonalized, intercept, 
+                   thresh, maxit, type.measure, same.lambda, yfac){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid,,drop=FALSE], 
                            group = group, 
@@ -328,7 +365,8 @@ cv.grpnet.default <-
                            penalty = penalty,
                            gamma = gamma, 
                            theta = theta,
-                           standardize = standardize,
+                           standardized = standardized,
+                           orthogonalized = orthogonalized,
                            intercept = intercept,
                            thresh = thresh,
                            maxit = maxit)
@@ -339,7 +377,7 @@ cv.grpnet.default <-
             cvloss <- rep(NA, nlambda)
             if(type.measure == "deviance"){
               for(i in 1:nlambda) {
-                cvloss[i] <- sum(temp$family$dev.resids(ymat[testid,,drop=FALSE], mu[,,i], weights[testid]))
+                cvloss[i] <- mean(temp$family$dev.resids(ymat[testid,,drop=FALSE], mu[,,i], weights[testid]))
               }
             } else if(type.measure == "mse") {
               for(i in 1:nlambda) {
@@ -371,7 +409,8 @@ cv.grpnet.default <-
                                       penalty = grpnet.fit$args$penalty,
                                       gamma = grpnet.fit$args$gamma,
                                       theta = grpnet.fit$args$theta,
-                                      standardize = grpnet.fit$args$standardize,
+                                      standardized = grpnet.fit$args$standardized,
+                                      orthogonalized = grpnet.fit$args$orthogonalized,
                                       intercept = grpnet.fit$args$intercept,
                                       thresh = grpnet.fit$args$thresh,
                                       maxit = grpnet.fit$args$maxit,
@@ -393,6 +432,7 @@ cv.grpnet.default <-
                            offset = offset[-fid[[k]],,drop=FALSE],
                            alpha = alpha,
                            lambda = lambda, 
+                           gamma = gamma,
                            ...)
             temp$ylev <- ylev
             mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], 
@@ -404,6 +444,7 @@ cv.grpnet.default <-
                            weights = weights[-fid[[k]]], 
                            offset = offset[-fid[[k]],,drop=FALSE],
                            alpha = alpha,
+                           gamma = gamma,
                            ...)
             temp$ylev <- ylev
             mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], s = lambda, 
@@ -411,7 +452,7 @@ cv.grpnet.default <-
           }
           if(type.measure == "deviance"){
             for(i in 1:nlambda) {
-              cvloss[i,k] <- sum(grpnet.fit$family$dev.resids(y[fid[[k]],,drop=FALSE], mu[,,i], weights[fid[[k]]]))
+              cvloss[i,k] <- mean(grpnet.fit$family$dev.resids(y[fid[[k]],,drop=FALSE], mu[,,i], weights[fid[[k]]]))
             }
           } else if(type.measure == "mse") {
             for(i in 1:nlambda) {
@@ -436,9 +477,10 @@ cv.grpnet.default <-
         
         # define parcvloss function
         parcvloss <- 
-          function(testid, xmat, ymat, group, family, weights, offset, alpha, nlambda,
-                   lambda.min.ratio, lambda, penalty.factor, penalty, gamma, theta,
-                   standardize, intercept, thresh, maxit, type.measure, same.lambda, yfac){
+          function(testid, xmat, ymat, group, family, weights, offset, alpha, 
+                   nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
+                   gamma, theta, standardized, orthogonalized, intercept, 
+                   thresh, maxit, type.measure, same.lambda, yfac){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid], 
                            group = group, 
@@ -453,7 +495,8 @@ cv.grpnet.default <-
                            penalty = penalty,
                            gamma = gamma,
                            theta = theta, 
-                           standardize = standardize,
+                           standardized = standardized,
+                           orthogonalized = orthogonalized,
                            intercept = intercept,
                            thresh = thresh,
                            maxit = maxit)
@@ -462,7 +505,7 @@ cv.grpnet.default <-
                           s = if(same.lambda) NULL else lambda,
                           type = ifelse(type.measure == "class", "class", "response"))
             if(type.measure == "deviance"){
-              cvloss <- colSums(temp$family$dev.resids(ymat[testid], mu, weights[testid]))
+              cvloss <- colMeans(temp$family$dev.resids(ymat[testid], mu, weights[testid]))
             } else if(type.measure == "mse") {
               cvloss <- colMeans((ymat[testid] - mu)^2)
             } else if(type.measure == "mae"){
@@ -489,7 +532,8 @@ cv.grpnet.default <-
                                       penalty = grpnet.fit$args$penalty,
                                       gamma = grpnet.fit$args$gamma,
                                       theta = grpnet.fit$args$theta,
-                                      standardize = grpnet.fit$args$standardize,
+                                      standardized = grpnet.fit$args$standardized,
+                                      orthogonalized = grpnet.fit$args$orthogonalized,
                                       intercept = grpnet.fit$args$intercept,
                                       thresh = grpnet.fit$args$thresh,
                                       maxit = grpnet.fit$args$maxit,
@@ -510,6 +554,7 @@ cv.grpnet.default <-
                            offset = offset[-fid[[k]]],
                            alpha = alpha,
                            lambda = lambda, 
+                           gamma = gamma, 
                            ...)
             temp$ylev <- ylev    # correct levels for classification loss
             mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE],
@@ -521,13 +566,14 @@ cv.grpnet.default <-
                            weights = weights[-fid[[k]]],
                            offset = offset[-fid[[k]]], 
                            alpha = alpha,
+                           gamma = gamma,
                            ...)
             temp$ylev <- ylev    # correct levels for classification loss
             mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], s = lambda,
                           type = ifelse(type.measure == "class", "class", "response"))
           } # end if(same.lambda)
           if(type.measure == "deviance"){
-            cvloss[,k] <- colSums(grpnet.fit$family$dev.resids(y[fid[[k]]], mu, weights[fid[[k]]]))
+            cvloss[,k] <- colMeans(grpnet.fit$family$dev.resids(y[fid[[k]]], mu, weights[fid[[k]]]))
           } else if(type.measure == "mse") {
             cvloss[,k] <- colMeans((y[fid[[k]]] - mu)^2)
           } else if(type.measure == "mae"){

@@ -4,7 +4,7 @@ rk <-
            periodic = FALSE, xlev = levels(x)){
     # reproducing kernel spline basis
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2023-09-19
+    # 2024-05-08
     
     
     ######***######   NOMINAL BASIS   ######***######
@@ -181,12 +181,12 @@ rk <-
         if(df < 1L) stop("The 'df' argument must satisfy:  df >= 1")
         if(df > n) warning("Requested 'df' is greater than the length of 'x'")
       }
-      knots <- quantile(x, probs = seq(0, 1, length.out = df))
+      knots <- unique(quantile(x, probs = seq(0, 1, length.out = df)))
     } else {
       knots <- as.numeric(knots)
       knots <- unique(sort(c(Boundary.knots, knots)))
-      df <- length(knots)
     }
+    df <- length(knots)
     
     # check periodic
     if(is.null(periodic)) periodic <- FALSE

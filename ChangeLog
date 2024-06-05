@@ -1,3 +1,59 @@
+Version 0.4   (2024-06-05)
+
+   1) Bug fix in rk() - only applicable to odd x distributions
+	* Defaults could have produced replicate knots (causing prediction issue)
+	* Previous: knots = quantile(x, probs = seq(0, 1, length.out = df))
+	* Updated:  knots = unique(quantile(x, probs = seq(0, 1, length.out = df)))
+
+   2) Added cv.compare() function
+	* Plots cv-error (+/- sd) for different solutions
+	* For a single model, it plots lambda.min and lambda.1se
+	* For multiple models, it plots (min, 1se) for all models
+
+   3) Added visualize.penalty() function
+	* New function to plot (or return grpnet penalty (or its derivative)
+	* Can plot/return the penalty evaluation for different signal strengths 
+	* Allows user to adjust hyperparameters that control the penalty
+
+   4) Added visualize.shrink() function
+	* New function to plot (or return) grpnet shrinkage (or its fitted values)
+	* Can plot/return the shrinkage operator for different signal strengths 
+	* Allows user to adjust hyperparameters that control the shrinkage
+
+   5) "character" variables are now supported by formula methods
+	* Previously rk.model.matrix failed for characters
+	* Now character variables are coerced to factors
+	* Applies to cv.grpnet, grpnet, and rk.model.matrix
+
+   6) Update to default gamma used for grpnet()
+	* The gamma argument is the hyperparameter for MCP and SCAD
+	* Previous default was gamma = 3 for MCP and gamma = 4 for SCAD
+	* New default is gamma = 4 for both MCP and SCAD
+
+   7) Update to defaults of standardized and orthogonalized in grpnet()
+	* Previous default was to standardize (i.e., standardized = TRUE)
+	* New default is to orthogonalize (i.e., orthogonalized = TRUE)
+	* In practice, it can be useful to compare both approaches
+
+   8) Updates to defaults of cv.grpnet() tuning
+	* Now deviance is defined as the MEAN (not SUM) of deviance residuals
+	* Now gamma is tuned with respect to c(3, 4, 5) when using MCP or SCAD
+	* Now $tune returns table of tuning results for alpha and gamma
+
+   9) Changes to defaults of predict.cv.grpnet
+	* Previously default prediction was at lambda.min
+	* New default is to predict at lambda.1se
+	* Revert to old default by using:  s = "lambda.min"
+
+  10) Added reference to Helwig (2024) for the ABGD algorithm
+	Helwig, N. E. (2024). Versatile descent algorithms for group 
+	regularization and variable selection in generalized linear models. 
+	Journal of Computational and Graphical Statistics.
+	doi: 10.1080/10618600.2024.2362232
+
+
+
+
 
 Version 0.3   (2024-02-20)
 

@@ -1,0 +1,12 @@
+citHeader("To cite the 'grpnet' package in publications, cite the JCGS paper and the current package version.")
+
+citation(auto = meta)
+
+bibentry(
+    bibtype="Article",
+    title = "Versatile descent algorithms for group regularization and variable selection in generalized linear models",
+    author = "Nathaniel E. Helwig",
+    journal = "Journal of Computational and Graphical Statistics",
+    year = "2024",
+    doi = "10.1080/10618600.2024.2362232",
+    textVersion = "Helwig NE (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. Journal of Computational and Graphical Statistics. https://doi.org/10.1080/10618600.2024.2362232" )
