@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-11-01
+!   Date: 2024-06-26
 
 
 ! INPUTS/OUTPUTS
@@ -27,7 +27,7 @@
 !   lmr = lambda minimum ratio (lambda.min = lmr * lambda.max)
 !         note: unless lambda is provided, lambda.max is data dependent
 !   penid = penalty id: 1 = lasso, 2 = mcp, 3 = scad
-!   gamma = additional hyper-parameter for mcd and scad penalities
+!   gamma = additional hyper-parameter for mcd and scad penalties
 !           note: gamma > 1 for mcp and gamma > 2 for scad
 !   eps = convergence tolerance
 !   maxit = maximum number of iterations
@@ -67,7 +67,7 @@ SUBROUTINE grpnet_poisson(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     DOUBLE PRECISION zvec(nvars), grad(nvars), gradnorm(ngrps)
     DOUBLE PRECISION ctol, shrink, twolam, penone, pentwo, xmean(nvars)
     DOUBLE PRECISION xsdev(ngrps), xev(ngrps), znorm, bnorm
-    DOUBLE PRECISION eta(nobs), mu(nobs), vmax
+    DOUBLE PRECISION eta(nobs), mu(nobs), vmax, ymax
     DOUBLE PRECISION, ALLOCATABLE :: xtx(:,:)
 ! --------------- LOCAL DEFINITIONS --------------- !
 
@@ -157,6 +157,7 @@ SUBROUTINE grpnet_poisson(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     eta = off
     mu = EXP(eta)
     r = w * (y - mu)
+    ymax = MAXVAL(y)
 ! --------------- MISCELLANEOUS INITIALIZATIONS --------------- !
 
 
@@ -185,11 +186,7 @@ SUBROUTINE grpnet_poisson(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                 iter = iter + 1
 
                 ! update vmax
-                IF (iter == 1) THEN
-                    vmax = MAX(MAXVAL(mu), MAXVAL(y))
-                ELSE
-                    vmax = MAXVAL(mu)
-                END IF
+                vmax = MAX(MAXVAL(mu), ymax)
 
                 ! update active groups
                 DO k=1,ngrps
@@ -316,7 +313,7 @@ SUBROUTINE grpnet_poisson(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                     ctol = 0.0D0
 
                     ! update vmax
-                    vmax = MAXVAL(mu)
+                    vmax = MAX(MAXVAL(mu), ymax)
 
                     ! unweighted or weighted update?
                     IF (weighted == 0) THEN
@@ -393,7 +390,7 @@ SUBROUTINE grpnet_poisson(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                             ctol = MAX(maxdif, ctol)
                         END IF ! (intercept == 1)
 
-                    END IF
+                    END IF ! IF (weighted == 0)
 
                     ! convergence check
                     IF(ctol < eps) EXIT

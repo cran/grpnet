@@ -1,3 +1,36 @@
+Version 0.5   (2024-07-12)
+
+   1) Bug fix in cv.grpnet() for multinomial response with matrix input
+	* Previously could produce NaN (divide by zero) due to normalization
+	* Only was a problem when y was a matrix with apply(y, 1, max) > 1
+	* Now normalization y / rowSums(y) only happens within grpnet()
+
+   2) Update to default type.measure of cv.grpnet()
+	* type.measure = "mae" is the new default for non-categorical responses
+	* Use type.measure = "deviance" to obtain the previous default
+	* type.measure = "class" is still the default for categorical responses
+
+   3) Improvements to internal Fortran code for adaptive variance bounding
+	* Previously used current mu for upper bound, e.g., vmax = max(mu)
+	* Now uses the max of current mu and response, e.g., vmax = max(max(mu), max(y))
+	* Applies to families: poisson, negative.binomial, inverse.gaussian
+
+   4) New argument to control which programming language is used (Fortran or R)
+	* "proglang" argument controls the programming language for internals
+	* Default is to use "Fortran" for internals (which is much faster)
+	* Using "R" is slower but can be helpful for pedagogical purposes
+
+   5) Improved degrees of freedom definition for multinomial 
+	* Previously the df calculation multiplied the result by nresp
+	* This ignores the loss of df due to the sum-to-zero constraint 
+	* Updated definition multiplies by (nresp-1) to account for loss of df
+
+   6) Added "time" (runtime) to output of cv.grpnet() and grpnet()
+
+   7) Improvements to help files for grpnet and cv.grpnet (and their predict methods)
+
+
+
 Version 0.4   (2024-06-05)
 
    1) Bug fix in rk() - only applicable to odd x distributions
@@ -50,8 +83,6 @@ Version 0.4   (2024-06-05)
 	regularization and variable selection in generalized linear models. 
 	Journal of Computational and Graphical Statistics.
 	doi: 10.1080/10618600.2024.2362232
-
-
 
 
 

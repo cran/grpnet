@@ -2,10 +2,13 @@ useDynLib(grpnet, .registration = TRUE)
 
 export(coef.cv.grpnet, coef.grpnet, cv.compare,
        cv.grpnet.default, cv.grpnet.formula, cv.grpnet, 
-       grpnet.default, grpnet.formula, grpnet,
+       family.grpnet, grpnet.default, grpnet.formula, grpnet,
        plot.cv.grpnet, plot.grpnet,
        predict.cv.grpnet, predict.grpnet,
        print.coef.grpnet, print.cv.grpnet, print.grpnet,
+       R_grpnet_binomial, R_grpnet_gamma, R_grpnet_gaussian, 
+       R_grpnet_invgaus, R_grpnet_maxeigval, R_grpnet_multinom, 
+       R_grpnet_negbin, R_grpnet_penalty,
        rk.model.matrix, rk, row.kronecker,
        visualize.penalty, visualize.shrink)
 

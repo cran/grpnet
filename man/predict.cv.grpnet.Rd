@@ -32,7 +32,7 @@ Data frame of new \code{data} scores for prediction (S3 "formula" method). Must 
 Lambda value(s) at which predictions should be obtained. Can input a character ("lambda.min" or "lambda.1se") or a numeric vector. Default of "lambda.min" uses the \code{lambda} value that minimizes the mean cross-validated error. 
 }
   \item{type}{
-Type of prediction to return. "link" gives predictions on the link scale (\eqn{\eta}). "response" gives predictions on the mean scale (\eqn{\mu}). "terms" gives the predictions for each term (group) in the model (\eqn{\eta_k}). "class" gives predicted class labels (for "binomial" and "multinomial" families). "coefficients" returns the coefficients used for predictions. "nonzero" returns a list giving the indices of non-zero coefficients for each \code{s}. "ncoefs" returns the number of non-zero coefficients for each \code{s}. "ngroups" returns the number of non-zero groups for each \code{s}. "norm" returns the L2 norm of each group's (raw) coefficients for each \code{s}. "znorm" returns the L2 norm of each group's standardized coefficients for each \code{s}.
+Type of prediction to return. "link" gives predictions on the link scale (\eqn{\eta}). "response" gives predictions on the mean scale (\eqn{\mu}). "class" gives predicted class labels (for "binomial" and "multinomial" families). "terms" gives the predictions for each term (group) in the model (\eqn{\eta_k}). "importance" gives the variable importance index for each term (group) in the model. "coefficients" returns the coefficients used for predictions. "nonzero" returns a list giving the indices of non-zero coefficients for each \code{s}. "groups" returns a list giving the labels of non-zero groups for each \code{s}. "ncoefs" returns the number of non-zero coefficients for each \code{s}. "ngroups" returns the number of non-zero groups for each \code{s}. "norm" returns the L2 norm of each group's (raw) coefficients for each \code{s}. "znorm" returns the L2 norm of each group's standardized coefficients for each \code{s}.
 }
   \item{...}{
 Additional arguments (ignored)
@@ -71,6 +71,7 @@ Syntax is inspired by the \code{predict.cv.glmnet} function in the \bold{glmnet}
 \code{\link{predict.grpnet}} for predicting from \code{\link{grpnet}} objects
 }
 \examples{
+\donttest{
 ######***######   family = "gaussian"   ######***######
 
 # load data
@@ -78,58 +79,62 @@ data(auto)
 
 # 10-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, alpha = 1)
-
-# get fitted values at "lambda.min"
-fit.min <- predict(mod, newdata = auto)
+mod <- cv.grpnet(mpg ~ ., data = auto)
 
 # get fitted values at "lambda.1se"
-fit.1se <- predict(mod, newdata = auto, s = "lambda.1se")
+fit.1se <- predict(mod, newdata = auto)
 
-# compare rmse for two solutions
-sqrt(mean((auto$mpg - fit.min)^2))
-sqrt(mean((auto$mpg - fit.1se)^2))
+# get fitted values at "lambda.min"
+fit.min <- predict(mod, newdata = auto, s = "lambda.min")
+
+# compare mean absolute error for two solutions
+mean(abs(auto$mpg - fit.1se))
+mean(abs(auto$mpg - fit.min))
 
 
 
-\donttest{
 ######***######   family = "binomial"   ######***######
 
 # load data
 data(auto)
 
-# define response (1 = American, 0 = other)
-y <- ifelse(auto$origin == "American", 1, 0)
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
 
-# define predictors
-x <- rk.model.matrix(~ 0 + ., data = auto[,1:7])
-
-# define group
-g <- attr(x, "assign")
-
-# 10-fold cv (default method, response = y)
+# 10-fold cv (default method, response = origin with 2 levels)
 set.seed(1)
-mod <- cv.grpnet(x, y, g, family = "binomial", alpha = 1)
-
-# get fitted values at "lambda.min"
-fit.min <- predict(mod, newx = x, type = "response")
-
-# get fitted values at "lambda.1se"
-fit.1se <- predict(mod, newx = x, type = "response", s = "lambda.1se")
-
-# compare rmse for two solutions
-sqrt(mean((y - fit.min)^2))
-sqrt(mean((y - fit.1se)^2))
-
-# get predicted classes at "lambda.min"
-fit.min <- predict(mod, newx = x, type = "class")
+mod <- cv.grpnet(origin ~ ., data = auto, family = "binomial")
 
 # get predicted classes at "lambda.1se"
-fit.1se <- predict(mod, newx = x, type = "class", s = "lambda.1se")
+fit.1se <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
 
 # compare misclassification rate for two solutions
-1 - mean(y == fit.min)
-1 - mean(y == fit.1se)
+1 - mean(auto$origin == fit.1se)
+1 - mean(auto$origin == fit.min)
+
+
+
+######***######   family = "multinomial"   ######***######
+
+# load data
+data(auto)
+
+# 10-fold cv (formula method, response = origin with 3 levels)
+set.seed(1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial")
+
+# get predicted classes at "lambda.1se"
+fit.1se <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
+
+# compare misclassification rate for two solutions
+1 - mean(auto$origin == fit.1se)
+1 - mean(auto$origin == fit.min)
 
 
 
@@ -140,17 +145,17 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson", alpha = 1)
-
-# get fitted values at "lambda.min"
-fit.min <- predict(mod, newdata = auto, type = "response")
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson")
 
 # get fitted values at "lambda.1se"
-fit.1se <- predict(mod, newdata = auto, type = "response", s = "lambda.1se")
+fit.1se <- predict(mod, newdata = auto, type = "response")
 
-# compare rmse for two solutions
-sqrt(mean((auto$horsepower - fit.min)^2))
-sqrt(mean((auto$horsepower - fit.1se)^2))
+# get fitted values at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "response", s = "lambda.min")
+
+# compare mean absolute error for two solutions
+mean(abs(auto$horsepower - fit.1se))
+mean(abs(auto$horsepower - fit.min))
 
 
 
@@ -161,39 +166,17 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial", 
-                 alpha = 1, theta = 100)
-
-# get fitted values at "lambda.min"
-fit.min <- predict(mod, newdata = auto, type = "response")
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial")
 
 # get fitted values at "lambda.1se"
-fit.1se <- predict(mod, newdata = auto, type = "response", s = "lambda.1se")
+fit.1se <- predict(mod, newdata = auto, type = "response")
 
-# compare rmse for two solutions
-sqrt(mean((auto$horsepower - fit.min)^2))
-sqrt(mean((auto$horsepower - fit.1se)^2))
+# get fitted values at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "response", s = "lambda.min")
 
-
-
-######***######   family = "multinomial"   ######***######
-
-# load data
-data(auto)
-
-# 10-fold cv (formula method, response = origin)
-set.seed(1)
-mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial", alpha = 1)
-
-# get predicted classes at "lambda.min"
-fit.min <- predict(mod, newdata = auto, type = "class")
-
-# get predicted classes at "lambda.1se"
-fit.1se <- predict(mod, newdata = auto, type = "class", s = "lambda.1se")
-
-# compare misclassification rate for two solutions
-1 - mean(auto$origin == fit.min)
-1 - mean(auto$origin == fit.1se)
+# compare mean absolute error for two solutions
+mean(abs(auto$horsepower - fit.1se))
+mean(abs(auto$horsepower - fit.min))
 
 
 
@@ -204,17 +187,17 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma", alpha = 1)
-
-# get fitted values at "lambda.min"
-fit.min <- predict(mod, newdata = auto, type = "response")
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma")
 
 # get fitted values at "lambda.1se"
-fit.1se <- predict(mod, newdata = auto, type = "response", s = "lambda.1se")
+fit.1se <- predict(mod, newdata = auto, type = "response")
 
-# compare rmse for two solutions
-sqrt(mean((auto$mpg - fit.min)^2))
-sqrt(mean((auto$mpg - fit.1se)^2))
+# get fitted values at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "response", s = "lambda.min")
+
+# compare mean absolute error for two solutions
+mean(abs(auto$mpg - fit.1se))
+mean(abs(auto$mpg - fit.min))
 
 
 
@@ -225,17 +208,17 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian", alpha = 1)
-
-# get fitted values at "lambda.min"
-fit.min <- predict(mod, newdata = auto, type = "response")
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian")
 
 # get fitted values at "lambda.1se"
-fit.1se <- predict(mod, newdata = auto, type = "response", s = "lambda.1se")
+fit.1se <- predict(mod, newdata = auto, type = "response")
 
-# compare rmse for two solutions
-sqrt(mean((auto$mpg - fit.min)^2))
-sqrt(mean((auto$mpg - fit.1se)^2))
+# get fitted values at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "response", s = "lambda.min")
+
+# compare mean absolute error for two solutions
+mean(abs(auto$mpg - fit.1se))
+mean(abs(auto$mpg - fit.min))
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

@@ -21,10 +21,11 @@ grpnet.formula <-
            orthogonalized = TRUE,
            thresh = 1e-04,
            maxit = 1e05,
+           proglang = c("Fortran", "R"),
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-05-28
+    # Updated: 2024-06-27
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -124,7 +125,8 @@ grpnet.formula <-
                           orthogonalized = orthogonalized,
                           intercept = intercept,
                           thresh = thresh,
-                          maxit = maxit)
+                          maxit = maxit,
+                          proglang = proglang)
     
     
     ######***######   POST-PROCESSING   ######***######

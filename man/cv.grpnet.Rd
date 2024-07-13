@@ -131,6 +131,7 @@ which is the classic definition of the standard error of the mean.
 \item{index}{two-element vector giving the indices of \code{lambda.min} and \code{lambda.1se} in the \code{lambda} vector, i.e., \code{c(minid, se1id)} as defined in the Note}
 \item{type.measure}{loss function for cross-validation (used for plot label)}
 \item{call}{matched call}
+\item{time}{runtime in seconds to perform k-fold CV tuning}
 \item{tune}{data frame containing the tuning results, i.e., min(cvm) for each combo of \code{alpha} and/or \code{gamma}}
 }
 \references{
@@ -164,14 +165,15 @@ Nathaniel E. Helwig <helwig@umn.edu>
 \code{\link{grpnet}} for fitting group elastic net regularization paths
 }
 \examples{
+\donttest{
 ######***######   family = "gaussian"   ######***######
 
 # load data
 data(auto)
 
-# 5-fold cv (formula method, response = mpg)
+# 10-fold cv (formula method, response = mpg)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, nfolds = 5, alpha = 1)
+mod <- cv.grpnet(mpg ~ ., data = auto)
 
 # print min and 1se solution info
 mod
@@ -180,24 +182,35 @@ mod
 plot(mod)
 
 
-\donttest{
+
 ######***######   family = "binomial"   ######***######
 
 # load data
 data(auto)
 
-# define response (1 = American, 0 = other)
-y <- ifelse(auto$origin == "American", 1, 0)
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
 
-# define predictors
-x <- rk.model.matrix(~ 0 + ., data = auto[,1:7])
-
-# define group
-g <- attr(x, "assign")
-
-# 10-fold cv (default method, response = y)
+# 10-fold cv (default method, response = origin with 2 levels)
 set.seed(1)
-mod <- cv.grpnet(x, y, g, family = "binomial", alpha = 1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "binomial")
+
+# print min and 1se solution info
+mod
+
+# plot cv error curve
+plot(mod)
+
+
+
+######***######   family = "multinomial"   ######***######
+
+# load data
+data(auto)
+
+# 10-fold cv (formula method, response = origin with 3 levels)
+set.seed(1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial")
 
 # print min and 1se solution info
 mod
@@ -214,7 +227,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson", alpha = 1)
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "poisson")
 
 # print min and 1se solution info
 mod
@@ -231,25 +244,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = horsepower)
 set.seed(1)
-mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial", 
-                 alpha = 1, theta = 100)
-
-# print min and 1se solution info
-mod
-
-# plot cv error curve
-plot(mod)
-
-
-
-######***######   family = "multinomial"   ######***######
-
-# load data
-data(auto)
-
-# 10-fold cv (formula method, response = origin)
-set.seed(1)
-mod <- cv.grpnet(origin ~ ., data = auto, family = "multinomial", alpha = 1)
+mod <- cv.grpnet(horsepower ~ ., data = auto, family = "negative.binomial")
 
 # print min and 1se solution info
 mod
@@ -266,7 +261,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma", alpha = 1)
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "Gamma")
 
 # print min and 1se solution info
 mod
@@ -283,7 +278,7 @@ data(auto)
 
 # 10-fold cv (formula method, response = origin)
 set.seed(1)
-mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian", alpha = 1)
+mod <- cv.grpnet(mpg ~ ., data = auto, family = "inverse.gaussian")
 
 # print min and 1se solution info
 mod

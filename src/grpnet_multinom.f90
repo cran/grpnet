@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-11-01
+!   Date: 2024-06-26
 
 
 ! INPUTS/OUTPUTS
@@ -272,7 +272,7 @@ SUBROUTINE grpnet_multinom(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw, &
         iters(i) = iter
         nzgrps(i) = nzgrps(i) + intercept
         nzcoef(i) = nzcoef(i) + intercept * nresp
-        edfs(i) = DBLE(nzcoef(i))
+        edfs(i) = DBLE(intercept * (nresp - 1))
         ! save results !
 
     END IF
@@ -345,7 +345,7 @@ SUBROUTINE grpnet_multinom(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw, &
                             ctol = MAX(maxdif , ctol)
                             IF(shrink > 0.0D0) THEN
                                 nzgrps(i) = nzgrps(i) + 1
-                                edfs(i) = edfs(i) + gsize(k) * nresp * shrink
+                                edfs(i) = edfs(i) + gsize(k) * (nresp - 1) * shrink
                             ENDIF
                         END DO ! k=1,ngrps
 
@@ -387,7 +387,7 @@ SUBROUTINE grpnet_multinom(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw, &
                             ctol = MAX(maxdif , ctol)
                             IF(shrink > 0.0D0) THEN
                                 nzgrps(i) = nzgrps(i) + 1
-                                edfs(i) = edfs(i) + gsize(k) * nresp * shrink
+                                edfs(i) = edfs(i) + gsize(k) * (nresp - 1) * shrink
                             ENDIF
                         END DO ! k=1,ngrps
 
@@ -470,7 +470,7 @@ SUBROUTINE grpnet_multinom(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw, &
         iters(i) = iter
         nzgrps(i) = nzgrps(i) + intercept
         nzcoef(i) = nzcoef(i) + intercept * nresp
-        edfs(i) = edfs(i) + DBLE(intercept * nresp)
+        edfs(i) = edfs(i) + DBLE(intercept * (nresp - 1))
         ! save results !
 
     END DO

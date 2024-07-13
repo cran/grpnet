@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-11-01
+!   Date: 2024-06-26
 
 
 ! INPUTS/OUTPUTS
@@ -27,7 +27,7 @@
 !   lmr = lambda minimum ratio (lambda.min = lmr * lambda.max)
 !         note: unless lambda is provided, lambda.max is data dependent
 !   penid = penalty id: 1 = lasso, 2 = mcp, 3 = scad
-!   gamma = additional hyper-parameter for mcd and scad penalities
+!   gamma = additional hyper-parameter for mcd and scad penalties
 !           note: gamma > 1 for mcp and gamma > 2 for scad
 !   eps = convergence tolerance
 !   maxit = maximum number of iterations
@@ -76,9 +76,7 @@ SUBROUTINE grpnet_gaussian(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
 ! --------------- MACHINE EPSILON --------------- !
 
 
-! --------------- PREPROCESSING --------------- !
-    
-    ! weighted cases? !
+! --------------- CHECK WEIGHTS --------------- !
     wmin = MINVAL(w)
     wmax = MAXVAL(w)
     IF (wmax > wmin) THEN
@@ -90,28 +88,8 @@ SUBROUTINE grpnet_gaussian(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
             x(i,:) = w(i) * x(i,:)
         END DO
     END IF
-    ! weighted cases? !
+! --------------- CHECK WEIGHTS --------------- !
     
-    ! miscellaneous initializations !
-    makelambda = 0
-    iter = 0
-    strong = 0
-    active = 0
-    nzgrps = 0
-    nzcoef = 0
-    zvec = 0.0D0
-    ibeta = 0.0D0
-    beta = 0.0D0
-    grad = 0.0D0
-    gradnorm = 0.0D0
-    twolam = 0.0D0
-    devs = 0.0D0
-    r = y - off
-    maxlam = MAXVAL(lambda)
-    ! miscellaneous initializations !
-
-! --------------- PREPROCESSING --------------- !
-
 
 ! --------------- GROUP INDICES --------------- !
     gid = 0
@@ -156,6 +134,25 @@ SUBROUTINE grpnet_gaussian(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
         END IF
     END DO
 ! --------------- GET MAX EIGENVALUE --------------- !
+
+
+! --------------- MISCELLANEOUS INITIALIZATIONS --------------- !
+    maxlam = MAXVAL(lambda)
+    makelambda = 0
+    iter = 0
+    strong = 0
+    active = 0
+    nzgrps = 0
+    nzcoef = 0
+    zvec = 0.0D0
+    ibeta = 0.0D0
+    beta = 0.0D0
+    grad = 0.0D0
+    gradnorm = 0.0D0
+    twolam = 0.0D0
+    devs = 0.0D0
+    r = y - off
+! --------------- MISCELLANEOUS INITIALIZATIONS --------------- !
 
 
 ! --------------- GENERATE LAMBDA --------------- !

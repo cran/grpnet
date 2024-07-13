@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-11-01
+!   Date: 2024-06-26
 
 
 ! INPUTS/OUTPUTS
@@ -337,7 +337,7 @@ SUBROUTINE grpnet_gamma(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
 
                         ! update intercept
                         IF (intercept == 1) THEN
-                            difibeta = SUM(r * w) / nobs
+                            difibeta = SUM(r) / nobs
                             maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(i)))
                             ibeta(i) = ibeta(i) + difibeta
                             eta = eta + difibeta

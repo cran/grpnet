@@ -2,7 +2,7 @@
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2023-11-01
+!   Date: 2024-06-26
 
 
 ! INPUTS/OUTPUTS
@@ -67,7 +67,7 @@ SUBROUTINE grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     DOUBLE PRECISION zvec(nvars), grad(nvars), gradnorm(ngrps)
     DOUBLE PRECISION ctol, shrink, twolam, penone, pentwo, xmean(nvars)
     DOUBLE PRECISION xsdev(ngrps), xev(ngrps), znorm, bnorm
-    DOUBLE PRECISION eta(nobs), mu(nobs), vmax
+    DOUBLE PRECISION eta(nobs), mu(nobs), vmax, ymax
     DOUBLE PRECISION, ALLOCATABLE :: xtx(:,:)
 ! --------------- LOCAL DEFINITIONS --------------- !
 
@@ -157,6 +157,7 @@ SUBROUTINE grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     eta = off
     mu = EXP(eta)
     r = w * (y - mu) / mu**2
+    ymax = MAXVAL(y)
 ! --------------- MISCELLANEOUS INITIALIZATIONS --------------- !
 
     
@@ -185,11 +186,7 @@ SUBROUTINE grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                 iter = iter + 1
 
                 ! update vmax
-                IF (iter == 1) THEN
-                    vmax = MAX(MAXVAL(mu), MAXVAL(y))
-                ELSE
-                    vmax = MAXVAL(mu)
-                END IF
+                vmax = MAX(MAXVAL(mu), ymax)
 
                 ! update active groups
                 DO k=1,ngrps
@@ -316,7 +313,7 @@ SUBROUTINE grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                     ctol = 0.0D0
 
                     ! update vmax
-                    vmax = MAXVAL(mu)
+                    vmax = MAX(MAXVAL(mu), ymax)
 
                     ! unweighted or weighted update?
                     IF (weighted == 0) THEN

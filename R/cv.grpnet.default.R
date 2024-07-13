@@ -18,10 +18,13 @@ cv.grpnet.default <-
            verbose = interactive(), ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-06-04
+    # Updated: 2024-07-10
     
     
     ######***######   INITIAL CHECKS   ######***######
+    
+    ### start clock
+    tic <- proc.time()[3]
     
     ### get call
     cv.grpnet.call <- match.call()
@@ -100,6 +103,7 @@ cv.grpnet.default <-
     } else if(family == "multinomial"){
       if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
+        yrowsum <- rep(1.0, nobs)
         yfac <- y
         yint <- as.integer(y)
         ylev <- levels(y)
@@ -118,9 +122,9 @@ cv.grpnet.default <-
         y <- t(apply(y, 1, as.integer))
         if(min(y) < 0) stop("Input 'y' must be a matrix of counts (i.e, non-negative integers)")
         yrowsum <- rowSums(y)
-        y <- y / yrowsum
-        weights <- weights * yrowsum
-        yfac <- factor(ylev[apply(y, 1, which.max)], levels = ylev)
+        #y <- y / yrowsum
+        #weights <- weights * yrowsum
+        yfac <- factor(ylev[unlist(apply(y, 1, which.max))], levels = ylev)
       } else {
         stop("Invalid data input: 'y' must be a factor or matrix for when family = 'multinomial'.")
       }
@@ -191,7 +195,7 @@ cv.grpnet.default <-
     
     ### check type.measure
     if(is.null(type.measure)){
-      type.measure <- ifelse(family %in% c("binomial", "multinomial"), "class", "deviance")
+      type.measure <- ifelse(family %in% c("binomial", "multinomial"), "class", "mae")
     } else {
       type.measure <- pmatch(as.character(type.measure[1]), c("deviance", "mse", "mae", "class"))
       if(is.na(type.measure)) stop("Invalid 'type.measure' argument.")
@@ -350,7 +354,7 @@ cv.grpnet.default <-
           function(testid, xmat, ymat, group, family, weights, offset, alpha, 
                    nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
                    gamma, theta, standardized, orthogonalized, intercept, 
-                   thresh, maxit, type.measure, same.lambda, yfac){
+                   thresh, maxit, type.measure, same.lambda, yfac, yrowsum){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid,,drop=FALSE], 
                            group = group, 
@@ -375,17 +379,19 @@ cv.grpnet.default <-
                           s = if(same.lambda) NULL else lambda,
                           type = ifelse(type.measure == "class", "class", "response"))
             cvloss <- rep(NA, nlambda)
+            y01 <- ymat[testid,,drop=FALSE] / yrowsum[testid]
             if(type.measure == "deviance"){
+              w01 <- weights[testid] * yrowsum[testid]
               for(i in 1:nlambda) {
-                cvloss[i] <- mean(temp$family$dev.resids(ymat[testid,,drop=FALSE], mu[,,i], weights[testid]))
+                cvloss[i] <- mean(temp$family$dev.resids(y01, mu[,,i], w01))
               }
             } else if(type.measure == "mse") {
               for(i in 1:nlambda) {
-                cvloss[i] <- mean((ymat[testid,,drop=FALSE] - mu[,,i])^2)
+                cvloss[i] <- mean((y01 - mu[,,i])^2)
               }
             } else if(type.measure == "mae"){
               for(i in 1:nlambda) {
-                cvloss[i] <- mean(abs(ymat[testid,,drop=FALSE] - mu[,,i]))
+                cvloss[i] <- mean(abs(y01 - mu[,,i]))
               }
             } else if(type.measure == "class"){
               cvloss <- 1 - colMeans(yfac[testid] == mu)
@@ -416,7 +422,8 @@ cv.grpnet.default <-
                                       maxit = grpnet.fit$args$maxit,
                                       type.measure = type.measure,
                                       same.lambda = same.lambda,
-                                      yfac = yfac)
+                                      yfac = yfac,
+                                      yrowsum = yrowsum)
         
         # unvectorize
         cvloss <- matrix(cvloss, nrow = nlambda, ncol = nfolds)
@@ -450,17 +457,19 @@ cv.grpnet.default <-
             mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], s = lambda, 
                           type = ifelse(type.measure == "class", "class", "response"))
           }
+          y01 <- y[fid[[k]],,drop=FALSE] / yrowsum[fid[[k]]]
           if(type.measure == "deviance"){
+            w01 <- weights[fid[[k]]] * yrowsum[fid[[k]]]
             for(i in 1:nlambda) {
-              cvloss[i,k] <- mean(grpnet.fit$family$dev.resids(y[fid[[k]],,drop=FALSE], mu[,,i], weights[fid[[k]]]))
+              cvloss[i,k] <- mean(grpnet.fit$family$dev.resids(y01, mu[,,i], w01))
             }
           } else if(type.measure == "mse") {
             for(i in 1:nlambda) {
-              cvloss[i,k] <- mean((y[fid[[k]],,drop=FALSE] - mu[,,i])^2)
+              cvloss[i,k] <- mean((y01 - mu[,,i])^2)
             }
           } else if(type.measure == "mae"){
             for(i in 1:nlambda) {
-              cvloss[i,k] <- mean(abs(y[fid[[k]],,drop=FALSE] - mu[,,i]))
+              cvloss[i,k] <- mean(abs(y01 - mu[,,i]))
             }
           } else if(type.measure == "class"){
             cvloss[,k] <- 1 - colMeans(yfac[fid[[k]]] == mu)
@@ -480,7 +489,7 @@ cv.grpnet.default <-
           function(testid, xmat, ymat, group, family, weights, offset, alpha, 
                    nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
                    gamma, theta, standardized, orthogonalized, intercept, 
-                   thresh, maxit, type.measure, same.lambda, yfac){
+                   thresh, maxit, type.measure, same.lambda, yfac, yrowsum){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid], 
                            group = group, 
@@ -614,6 +623,9 @@ cv.grpnet.default <-
       grpnet.fit$term.labels <- names(gsize)
     }
     
+    ### end clock
+    toc <- proc.time()[3]
+    
     ### return results
     res <- list(lambda = lambda, 
                 cvm = cvm, 
@@ -626,7 +638,8 @@ cv.grpnet.default <-
                 lambda.1se = lambda.1se,
                 index = c(minid, se1id),
                 type.measure = type.measure,
-                call = cv.grpnet.call)
+                call = cv.grpnet.call,
+                time = toc - tic)
     class(res) <- "cv.grpnet"
     return(res)
     

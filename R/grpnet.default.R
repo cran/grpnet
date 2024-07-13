@@ -22,13 +22,17 @@ grpnet.default <-
            intercept = TRUE,
            thresh = 1e-04,
            maxit = 1e05,
+           proglang = c("Fortran", "R"),
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-05-28
+    # Updated: 2024-07-10
     
     
     ######***######   INITIAL CHECKS   ######***######
+    
+    ### start clock
+    tic <- proc.time()[3]
     
     ### get call
     grpnet.call <- match.call()
@@ -65,78 +69,7 @@ grpnet.default <-
     family <- pmatch(as.character(family[1]), c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian"))
     if(is.na(family)) stop("'family' not recognized")
     family <- c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")[family]
-    if(family == "gaussian"){
-      family <- gaussian()
-    } else if(family == "binomial"){
-      dr <- function(y, mu, wt){
-        ylogy <- function(y, mu){
-          res <- y * log(y / mu)
-          res[is.nan(res)] <- 0
-          res
-        }
-        mu[mu < 0.000001] <- 0.000001
-        mu[mu > 0.999999] <- 0.999999
-        2 * wt * (ylogy(y, mu) + ylogy(1 - y, 1 - mu))
-      }
-      family <- list(family = "binomial",
-                     linkinv = function(eta) {1 / (1 + exp(-eta))},
-                     dev.resids = dr)
-    } else if (family == "multinomial"){
-      il <- function(eta){
-        expeta <- exp(eta - apply(eta, 1, max))
-        mu <- expeta / rowSums(expeta)
-        mu[mu < 0.000001] <- 0.000001
-        mu[mu > 0.999999] <- 0.999999
-        mu
-      } # end il
-      dr <- function(y, mu, wt) {
-        mu[mu < 0.000001] <- 0.000001
-        mu[mu > 0.999999] <- 0.999999
-        -2 * wt * rowSums(y * log(mu))
-      }
-      family <- list(family = "multinomial",
-                     linkinv = il,
-                     dev.resids = dr)
-    } else if(family == "poisson"){
-      il <- function(eta) pmax(exp(eta), .Machine$double.eps)
-      dr <- function(y, mu, wt){
-        r <- mu * wt
-        p <- which(y > 0)
-        if(is.matrix(mu) && ncol(mu) > 1L){
-          r[p,] <- (wt * (y * log(y/mu) - (y - mu)))[p,]
-        } else {
-          r[p] <- (wt * (y * log(y/mu) - (y - mu)))[p]
-        }
-        2 * r
-      }
-      family <- list(family = "poisson",
-                     linkinv = il,
-                     dev.resids = dr)
-    } else if(family == "negative.binomial"){
-      il <- function(eta) pmax(exp(eta), .Machine$double.eps)
-      dr <- function(y, mu, wt){
-        2 * wt * ( y * log(pmax(1, y) / mu) - (y + .Theta) * log((y + .Theta) / (mu + .Theta)) )
-      }
-      family <- list(family = "negative.binomial",
-                     linkinv = il,
-                     dev.resids = dr)
-    } else if(family == "Gamma"){
-      il <- function(eta) pmax(exp(eta), .Machine$double.eps)
-      dr <- function(y, mu, wt){
-        -2 * wt * (log(y / mu) - (y - mu) / mu)
-      }
-      family <- list(family = "Gamma",
-                     linkinv = il,
-                     dev.resids = dr)
-    } else if(family == "inverse.gaussian"){
-      il <- function(eta) pmax(exp(eta), .Machine$double.eps)
-      dr <- function(y, mu, wt){
-        wt * ( (y - mu)^2 / (y * mu^2) )
-      }
-      family <- list(family = "inverse.gaussian",
-                     linkinv = il,
-                     dev.resids = dr)
-    } # end if(family == "gaussian")
+    family <- family.grpnet(family, theta)
     
     ### check weights
     if(is.null(weights)){
@@ -286,15 +219,6 @@ grpnet.default <-
       if(gamma <= 2L) stop("Need gamma > 2 when penalty = 'SCAD'")
     }
     
-    ### check theta
-    if(family$family == "negative.binomial"){
-      theta <- as.numeric(theta[1])
-      if(theta <= 0) stop("Input 'theta' must be positive")
-      .Theta <- theta
-      env <- new.env(parent = .GlobalEnv)
-      assign(".Theta", theta, envir = env)
-    }
-    
     ### standardized
     standardized <- as.logical(standardized[1])
     if(!any(standardized == c(TRUE, FALSE))) stop("Input 'standardized' must be TRUE or FALSE")
@@ -315,6 +239,15 @@ grpnet.default <-
     ### check maxit
     maxit <- as.integer(maxit[1])
     if(maxit <= 0) stop("Input 'maxit' must be a positive integer")
+    
+    ### check proglang
+    proglangs <- c("Fortran", "R")
+    proglang <- as.character(proglang[1])
+    proglang <- pmatch(toupper(proglang), toupper(proglangs))
+    if(is.na(proglang)){
+      stop("Input 'proglang' must be 'Fortran' or 'R'.")
+    }
+    proglang <- proglangs[proglang]
     
     
     ######***######   WORK   ######***######
@@ -344,100 +277,192 @@ grpnet.default <-
     ### check family
     if(family$family == "gaussian"){
       
-      ## call fortran code
-      res <- .Fortran("grpnet_gaussian",
-                      nobs = nobs,
-                      nvars = nvars,
-                      x = x,
-                      y = y,
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = rep(0.0, nlambda),
-                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_gaussian",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_gaussian(nobs = nobs,
+                                 nvars = nvars,
+                                 x = x,
+                                 y = y,
+                                 w = weights,
+                                 off = offset,
+                                 ngrps = ngrps,
+                                 gsize = gsize, 
+                                 pw = penalty.factor,
+                                 alpha = alpha,
+                                 nlam = nlambda,
+                                 lambda = lambda,
+                                 lmr = lambda.min.ratio, 
+                                 penid = penalty,
+                                 gamma = gamma,
+                                 eps = thresh,
+                                 maxit = maxit,
+                                 standardize = as.integer(standardized),
+                                 intercept = as.integer(intercept),
+                                 ibeta = rep(0.0, nlambda),
+                                 betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                                 iters = rep(0L, nlambda),
+                                 nzgrps = rep(0L, nlambda),
+                                 nzcoef = rep(0L, nlambda),
+                                 edfs = rep(0.0, nlambda),
+                                 devs = rep(0.0, nlambda),
+                                 nulldev = 0.0)
+        
+      } # end if(proglang == "Fortran")
       
     } else if(family$family == "binomial"){
       
-      ## call fortran code
-      res <- .Fortran("grpnet_binomial",
-                      nobs = nobs,
-                      nvars = nvars,
-                      x = x,
-                      y = y,
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = rep(0.0, nlambda),
-                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_binomial",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_binomial(nobs = nobs,
+                                 nvars = nvars,
+                                 x = x,
+                                 y = y,
+                                 w = weights,
+                                 off = offset,
+                                 ngrps = ngrps,
+                                 gsize = gsize, 
+                                 pw = penalty.factor,
+                                 alpha = alpha,
+                                 nlam = nlambda,
+                                 lambda = lambda,
+                                 lmr = lambda.min.ratio, 
+                                 penid = penalty,
+                                 gamma = gamma,
+                                 eps = thresh,
+                                 maxit = maxit,
+                                 standardize = as.integer(standardized),
+                                 intercept = as.integer(intercept),
+                                 ibeta = rep(0.0, nlambda),
+                                 betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                                 iters = rep(0L, nlambda),
+                                 nzgrps = rep(0L, nlambda),
+                                 nzcoef = rep(0L, nlambda),
+                                 edfs = rep(0.0, nlambda),
+                                 devs = rep(0.0, nlambda),
+                                 nulldev = 0.0)
+      } # end if(proglang == "Fortran")
       
     } else if(family$family == "multinomial"){
       
-      ## call fortran code
-      res <- .Fortran("grpnet_multinom",
-                      nobs = nobs,
-                      nvars = nvars,
-                      nresp = nlev,
-                      x = x,
-                      y = y,
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = matrix(0.0, nrow = nlev, ncol = nlambda),
-                      betas = array(0.0, dim = c(nvars, nlev, nlambda)),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_multinom",
+                        nobs = nobs,
+                        nvars = nvars,
+                        nresp = nlev,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = matrix(0.0, nrow = nlev, ncol = nlambda),
+                        betas = array(0.0, dim = c(nvars, nlev, nlambda)),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_multinom(nobs = nobs,
+                                 nvars = nvars,
+                                 nresp = nlev,
+                                 x = x,
+                                 y = y,
+                                 w = weights,
+                                 off = offset,
+                                 ngrps = ngrps,
+                                 gsize = gsize, 
+                                 pw = penalty.factor,
+                                 alpha = alpha,
+                                 nlam = nlambda,
+                                 lambda = lambda,
+                                 lmr = lambda.min.ratio, 
+                                 penid = penalty,
+                                 gamma = gamma,
+                                 eps = thresh,
+                                 maxit = maxit,
+                                 standardize = as.integer(standardized),
+                                 intercept = as.integer(intercept),
+                                 ibeta = matrix(0.0, nrow = nlev, ncol = nlambda),
+                                 betas = array(0.0, dim = c(nvars, nlev, nlambda)),
+                                 iters = rep(0L, nlambda),
+                                 nzgrps = rep(0L, nlambda),
+                                 nzcoef = rep(0L, nlambda),
+                                 edfs = rep(0.0, nlambda),
+                                 devs = rep(0.0, nlambda),
+                                 nulldev = 0.0)
+      } # end if(proglang == "Fortran")
       
       ## post-process coefs
       rownames(res$ibeta) <- ylev
@@ -453,132 +478,253 @@ grpnet.default <-
       
     } else if(family$family == "poisson"){
     
-      ## call fortran code
-      res <- .Fortran("grpnet_poisson",
-                      nobs = nobs,
-                      nvars = nvars,
-                      x = x,
-                      y = as.numeric(y),
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = rep(0.0, nlambda),
-                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_poisson",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = as.numeric(y),
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_poisson(nobs = nobs,
+                                nvars = nvars,
+                                x = x,
+                                y = as.numeric(y),
+                                w = weights,
+                                off = offset,
+                                ngrps = ngrps,
+                                gsize = gsize, 
+                                pw = penalty.factor,
+                                alpha = alpha,
+                                nlam = nlambda,
+                                lambda = lambda,
+                                lmr = lambda.min.ratio, 
+                                penid = penalty,
+                                gamma = gamma,
+                                eps = thresh,
+                                maxit = maxit,
+                                standardize = as.integer(standardized),
+                                intercept = as.integer(intercept),
+                                ibeta = rep(0.0, nlambda),
+                                betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                                iters = rep(0L, nlambda),
+                                nzgrps = rep(0L, nlambda),
+                                nzcoef = rep(0L, nlambda),
+                                edfs = rep(0.0, nlambda),
+                                devs = rep(0.0, nlambda),
+                                nulldev = 0.0)
+      } # end if(proglang == "Fortran")
       
     } else if(family$family == "negative.binomial"){
       
-      ## call fortran code
-      res <- .Fortran("grpnet_negbin",
-                      nobs = nobs,
-                      nvars = nvars,
-                      x = x,
-                      y = as.numeric(y),
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = rep(0.0, nlambda),
-                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0,
-                      theta = theta)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_negbin",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = as.numeric(y),
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0,
+                        theta = theta)
+      } else {
+        res <- R_grpnet_negbin(nobs = nobs,
+                               nvars = nvars,
+                               x = x,
+                               y = as.numeric(y),
+                               w = weights,
+                               off = offset,
+                               ngrps = ngrps,
+                               gsize = gsize, 
+                               pw = penalty.factor,
+                               alpha = alpha,
+                               nlam = nlambda,
+                               lambda = lambda,
+                               lmr = lambda.min.ratio, 
+                               penid = penalty,
+                               gamma = gamma,
+                               eps = thresh,
+                               maxit = maxit,
+                               standardize = as.integer(standardized),
+                               intercept = as.integer(intercept),
+                               ibeta = rep(0.0, nlambda),
+                               betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                               iters = rep(0L, nlambda),
+                               nzgrps = rep(0L, nlambda),
+                               nzcoef = rep(0L, nlambda),
+                               edfs = rep(0.0, nlambda),
+                               devs = rep(0.0, nlambda),
+                               nulldev = 0.0,
+                               theta = theta)
+      } # end if(proglang == "Fortran")
       
     } else if(family$family == "Gamma"){
       
-      ## call fortran code
-      res <- .Fortran("grpnet_gamma",
-                      nobs = nobs,
-                      nvars = nvars,
-                      x = x,
-                      y = y,
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = rep(0.0, nlambda),
-                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_gamma",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_gamma(nobs = nobs,
+                              nvars = nvars,
+                              x = x,
+                              y = y,
+                              w = weights,
+                              off = offset,
+                              ngrps = ngrps,
+                              gsize = gsize, 
+                              pw = penalty.factor,
+                              alpha = alpha,
+                              nlam = nlambda,
+                              lambda = lambda,
+                              lmr = lambda.min.ratio, 
+                              penid = penalty,
+                              gamma = gamma,
+                              eps = thresh,
+                              maxit = maxit,
+                              standardize = as.integer(standardized),
+                              intercept = as.integer(intercept),
+                              ibeta = rep(0.0, nlambda),
+                              betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                              iters = rep(0L, nlambda),
+                              nzgrps = rep(0L, nlambda),
+                              nzcoef = rep(0L, nlambda),
+                              edfs = rep(0.0, nlambda),
+                              devs = rep(0.0, nlambda),
+                              nulldev = 0.0)
+      } # end if(proglang == "Fortran")
       
     } else if(family$family == "inverse.gaussian"){
       
-      ## call fortran code
-      res <- .Fortran("grpnet_invgaus",
-                      nobs = nobs,
-                      nvars = nvars,
-                      x = x,
-                      y = y,
-                      w = weights,
-                      off = offset,
-                      ngrps = ngrps,
-                      gsize = gsize, 
-                      pw = penalty.factor,
-                      alpha = alpha,
-                      nlam = nlambda,
-                      lambda = lambda,
-                      lmr = lambda.min.ratio, 
-                      penid = penalty,
-                      gamma = gamma,
-                      eps = thresh,
-                      maxit = maxit,
-                      standardize = as.integer(standardized),
-                      intercept = as.integer(intercept),
-                      ibeta = rep(0.0, nlambda),
-                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                      iters = rep(0L, nlambda),
-                      nzgrps = rep(0L, nlambda),
-                      nzcoef = rep(0L, nlambda),
-                      edfs = rep(0.0, nlambda),
-                      devs = rep(0.0, nlambda),
-                      nulldev = 0.0)
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_invgaus",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_invgaus(nobs = nobs,
+                                nvars = nvars,
+                                x = x,
+                                y = y,
+                                w = weights,
+                                off = offset,
+                                ngrps = ngrps,
+                                gsize = gsize, 
+                                pw = penalty.factor,
+                                alpha = alpha,
+                                nlam = nlambda,
+                                lambda = lambda,
+                                lmr = lambda.min.ratio, 
+                                penid = penalty,
+                                gamma = gamma,
+                                eps = thresh,
+                                maxit = maxit,
+                                standardize = as.integer(standardized),
+                                intercept = as.integer(intercept),
+                                ibeta = rep(0.0, nlambda),
+                                betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                                iters = rep(0L, nlambda),
+                                nzgrps = rep(0L, nlambda),
+                                nzcoef = rep(0L, nlambda),
+                                edfs = rep(0.0, nlambda),
+                                devs = rep(0.0, nlambda),
+                                nulldev = 0.0)
+      } # end if(proglang == "Fortran")
       
     } # end if(family$family == "gaussian")
     
@@ -640,6 +786,9 @@ grpnet.default <-
       names(res$pw) <- c("(Intercept)", thenames)
     }
     
+    ## end clock
+    toc <- proc.time()[3]
+    
     ## collect results
     res <- list(call = grpnet.call,
                 a0 = res$ibeta, 
@@ -658,6 +807,7 @@ grpnet.default <-
                 group = ingroup,
                 ngroups = ngrps,
                 npasses = res$iters, 
+                time = toc - tic,
                 offset = include.offset,
                 args = args,
                 term.labels = gnames)

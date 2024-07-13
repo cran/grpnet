@@ -7,7 +7,7 @@
 Fit a Group Elastic Net Regularized GLM/GAM
 }
 \description{
-Fits generalized linear/additive models with a group elastic net penalty. Predictor groups can be manually input (default S3 method) or inferred from the model (S3 "formula" method). The regularization path is computed at a data-generated (default) or user-provided sequence of lambda values. }
+Fits generalized linear/additive models with a group elastic net penalty using an adaptively bounded gradient descent (ABGD) algorithm (Helwig, 2024). Predictor groups can be manually input (default S3 method) or inferred from the model (S3 "formula" method). The regularization path is computed at a data-generated (default) or user-provided sequence of lambda values. }
 \usage{
 grpnet(x, \dots)
 
@@ -30,7 +30,8 @@ grpnet(x, \dots)
        orthogonalized = TRUE,
        intercept = TRUE, 
        thresh = 1e-04, 
-       maxit = 1e05, 
+       maxit = 1e05,
+       proglang = c("Fortran", "R"),
        ...)
       
 \method{grpnet}{formula}(formula,
@@ -52,6 +53,7 @@ grpnet(x, \dots)
        orthogonalized = TRUE,
        thresh = 1e-04,
        maxit = 1e05,
+       proglang = c("Fortran", "R"),
        ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -124,6 +126,9 @@ Convergence threshold (tolerance). The algorithm is determined to have converged
   \item{maxit}{
 Maximum number of iterations to allow.
 }
+  \item{proglang}{
+Which programming language should be used to implement the ABGD algorithm? Options include \code{"Fortran"} (default) or \code{"R"}.
+}
   \item{\dots}{
 Additional arguments used by the default or formula method.
 }
@@ -185,6 +190,7 @@ An object of class \code{"grpnet"} with the following elements:
 \item{group}{group label vector}
 \item{ngroups }{number of groups \eqn{K}}
 \item{npasses }{number of iterations for each \code{lambda}}
+\item{time }{runtime in seconds to compute regularization path}
 \item{offset }{logical indicating if an offset was included}
 \item{args }{list of input argument values}
 \item{formula }{input formula (possibly after expansion)}
@@ -281,17 +287,27 @@ plot(mod)
 # load data
 data(auto)
 
-# define response (1 = American, 0 = other)
-y <- ifelse(auto$origin == "American", 1, 0)
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
 
-# define predictors
-x <- rk.model.matrix(~ 0 + ., data = auto[,1:7])
+# fit model (formula method, response = origin with 2 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "binomial")
 
-# define group
-g <- attr(x, "assign")
+# print regularization path info
+mod
 
-# fit model (default method, response = y)
-mod <- grpnet(x, y, g, family = "binomial")
+# plot coefficient paths
+plot(mod)
+
+
+
+######***######   family = "multinomial"   ######***######
+
+# load data
+data(auto)
+
+# fit model (formula method, response = origin with 3 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "multinomial")
 
 # print regularization path info
 mod
@@ -323,23 +339,7 @@ plot(mod)
 data(auto)
 
 # fit model (formula method, response = horsepower)
-mod <- grpnet(horsepower ~ ., data = auto, family = "negative.binomial", theta = 100)
-
-# print regularization path info
-mod
-
-# plot coefficient paths
-plot(mod)
-
-
-
-######***######   family = "multinomial"   ######***######
-
-# load data
-data(auto)
-
-# fit model (formula method, response = origin)
-mod <- grpnet(origin ~ ., data = auto, family = "multinomial")
+mod <- grpnet(horsepower ~ ., data = auto, family = "negative.binomial")
 
 # print regularization path info
 mod
