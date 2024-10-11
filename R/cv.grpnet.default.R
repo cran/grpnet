@@ -15,10 +15,13 @@ cv.grpnet.default <-
            same.lambda = FALSE,
            parallel = FALSE, 
            cluster = NULL, 
-           verbose = interactive(), ...){
+           verbose = interactive(), 
+           adaptive = FALSE,
+           power = 1, 
+           ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-07-10
+    # Updated: 2024-10-10
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -169,7 +172,12 @@ cv.grpnet.default <-
     nalpha <- length(alpha)
     
     ### get penalty
-    penalty <- args$penalty
+    argnames <- names(args)
+    if(any(argnames == "penalty")){
+      penalty <- args$penalty
+    } else {
+      penalty <- NULL
+    }
     if(is.null(penalty)){
       penalty <- 1L
     } else {
@@ -237,6 +245,78 @@ cv.grpnet.default <-
     ### check verbose
     verbose <- as.logical(verbose[1])
     if(!any(verbose == c(TRUE, FALSE))) stop("Input 'verbose' must be TRUE or FALSE")
+    
+    ### check adaptive
+    adaptive <- as.logical(adaptive[1])
+    if(!any(adaptive == c(TRUE, FALSE))) stop("Input 'adaptive' must be TRUE or FALSE")
+    
+    ### check power
+    power <- as.numeric(power[1])
+    if(power <= 0) stop("Input 'power' must be a positive numeric")
+    
+    
+    
+    ######***######   ADAPTIVE OMEGA TUNING   ######***######
+    
+    if(adaptive){
+      
+      ### ridge fit
+      mod <- cv.grpnet.default(x = x, 
+                               y = y, 
+                               group = group,
+                               weights = weights,
+                               offset = offset,
+                               alpha = 0,
+                               gamma = gamma,
+                               type.measure = type.measure,
+                               nfolds = nfolds, 
+                               foldid = foldid,
+                               same.lambda = same.lambda,
+                               parallel = parallel, 
+                               cluster = cluster, 
+                               verbose = FALSE, 
+                               adaptive = FALSE,
+                               power = 1, 
+                               ...)
+      
+      ### update penalty weights
+      penfac0 <- mod$grpnet.fit$args$penalty.factor
+      if(mod$grpnet.fit$args$orthogonalized){
+        penfac <- sqrt(colSums(predict(mod, newx = x, type = "terms")^2))
+      } else if(mod$grpnet.fit$args$standardized){
+        penfac <- predict(mod, newx = x, type = "znorm")[-1]
+      } else {
+        penfac <- predict(mod, newx = x, type = "norm")[-1]
+      }
+      penfac <- penfac0 / (penfac^power)
+      
+      ### refit with updated penalty weights
+      mod <- cv.grpnet.default(x = x, 
+                               y = y, 
+                               group = group,
+                               weights = weights,
+                               offset = offset,
+                               alpha = alpha,
+                               gamma = gamma,
+                               type.measure = type.measure,
+                               nfolds = nfolds, 
+                               foldid = foldid,
+                               same.lambda = same.lambda,
+                               parallel = parallel, 
+                               cluster = cluster, 
+                               verbose = verbose, 
+                               penalty.factor = penfac,
+                               adaptive = FALSE,
+                               power = 1, 
+                               ...)
+      
+      ### return result
+      attr(adaptive, "power") <- power
+      mod$adaptive <- adaptive
+      return(mod)
+      
+    } # end if(adaptive)
+    
     
     
     ######***######   TUNE ALPHA AND/OR GAMMA   ######***######
@@ -626,6 +706,9 @@ cv.grpnet.default <-
     ### end clock
     toc <- proc.time()[3]
     
+    ### add power attr to adaptive
+    attr(adaptive, "power") <- power
+    
     ### return results
     res <- list(lambda = lambda, 
                 cvm = cvm, 
@@ -638,6 +721,7 @@ cv.grpnet.default <-
                 lambda.1se = lambda.1se,
                 index = c(minid, se1id),
                 type.measure = type.measure,
+                adaptive = adaptive,
                 call = cv.grpnet.call,
                 time = toc - tic)
     class(res) <- "cv.grpnet"

@@ -198,13 +198,9 @@ An object of class \code{"grpnet"} with the following elements:
 \item{rk.args }{arguments for rk.model.matrix function (if applicable)}
 }
 \references{
-Breheny, P., & Huang, J. (2015). Group descent algorithms for nonconvex penalized linear and logistic regression models with grouped predictors. \emph{Statistics and Computing, 25}, 173-187. \doi{10.1007/s11222-013-9424-2}
-
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
 
 Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
-
-Yang, Y., & Zou, H. (2015). A fast unified algorithm for solving group-lasso penalize learning problems. \emph{Statistics and Computing, 25}, 1129-1141. \doi{10.1007/s11222-014-9498-5}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

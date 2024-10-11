@@ -15,11 +15,13 @@ cv.grpnet.formula <-
            same.lambda = FALSE,
            parallel = FALSE, 
            cluster = NULL, 
-           verbose = interactive(), 
+           verbose = interactive(),
+           adaptive = FALSE,
+           power = 1, 
            ...){
     # k-fold cross-validation for grpnet (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-06-04
+    # Updated: 2024-10-10
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -106,6 +108,8 @@ cv.grpnet.formula <-
                                cluster = cluster, 
                                verbose = verbose,
                                intercept = intercept, 
+                               adaptive = adaptive,
+                               power = power,
                                ...)
       
     } else {
@@ -138,7 +142,9 @@ cv.grpnet.formula <-
                     parallel = parallel, 
                     cluster = cluster, 
                     verbose = verbose,
-                    intercept = intercept)
+                    intercept = intercept,
+                    adaptive = adaptive,
+                    power = power)
       allargs <- c(iargs, args)
       
       # call cv.grpnet.default

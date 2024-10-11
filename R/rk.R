@@ -4,7 +4,7 @@ rk <-
            periodic = FALSE, xlev = levels(x)){
     # reproducing kernel spline basis
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2024-05-08
+    # 2024-07-17
     
     
     ######***######   NOMINAL BASIS   ######***######
@@ -211,6 +211,7 @@ rk <-
     
     # transform x and knots
     xr <- diff(Boundary.knots)
+    if(xr < .Machine$double.eps) xr <- 1.0
     x <- (x - Boundary.knots[1]) / xr
     knots <- (knots - Boundary.knots[1]) / xr
     

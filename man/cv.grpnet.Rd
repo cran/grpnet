@@ -26,6 +26,8 @@ cv.grpnet(x, \dots)
           parallel = FALSE, 
           cluster = NULL, 
           verbose = interactive(), 
+          adaptive = FALSE,
+          power = 1,
           ...)
            
 \method{cv.grpnet}{formula}(formula,
@@ -42,6 +44,8 @@ cv.grpnet(x, \dots)
           parallel = FALSE, 
           cluster = NULL, 
           verbose = interactive(), 
+          adaptive = FALSE,
+          power = 1,
           ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -97,6 +101,12 @@ Optional cluster to use for parallel computing. If \code{parallel = TRUE} and \c
   \item{verbose}{
 Logical indicating if the fitting progress should be printed. Defaults to \code{TRUE} in interactive sessions and \code{FALSE} otherwise. 
 }
+\item{adaptive}{
+Logical indicating if the adaptive group elastic net should be used (see Note).
+}
+\item{power}{
+If \code{adaptive = TRUE}, then the adaptive penalty weights are defined by dividing the original penalty weights by \code{tapply(coef, group, norm, type = "F")^power}.
+}
   \item{...}{
 Optional additional arguments for \code{\link{grpnet}} (e.g., \code{standardize}, \code{penalty.factor}, etc.)
 }
@@ -135,20 +145,19 @@ which is the classic definition of the standard error of the mean.
 \item{tune}{data frame containing the tuning results, i.e., min(cvm) for each combo of \code{alpha} and/or \code{gamma}}
 }
 \references{
-Breheny, P., & Huang, J. (2015). Group descent algorithms for nonconvex penalized linear and logistic regression models with grouped predictors. \emph{Statistics and Computing, 25}, 173-187. \doi{10.1007/s11222-013-9424-2}
-
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
 
 Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
-
-Yang, Y., & Zou, H. (2015). A fast unified algorithm for solving group-lasso penalize learning problems. \emph{Statistics and Computing, 25}, 1129-1141. \doi{10.1007/s11222-014-9498-5}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>
 }
 \note{
-\code{lambda.1se} is defined as follows:
+When \code{adaptive = TRUE}, the adaptive group elastic net is used: \cr
+(1) an initial fit with \code{alpha = 0} estimates the \code{penalty.factor} \cr
+(2) a second fit using estimated \code{penalty.factor} is returned \cr
 
+\code{lambda.1se} is defined as follows: \cr
 \code{minid <- which.min(cvm)} \cr
 \code{min1se <- cvm[minid] + cvsd[minid]} \cr
 \code{se1id <- which(cvm <= min1se)[1]} \cr

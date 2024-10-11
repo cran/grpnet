@@ -1,3 +1,25 @@
+Version 0.6   (2024-10-11)
+
+   1) Bug fix in rk() function for situations when min(x) = max(x)
+	* In this setup, x is a useless predictor (by definition) 
+	* Previous defaults would produce NaN error (divide by zero)
+	* Updated version can handle predictors with zero variance
+   2) Bug fix in grpnet() function for situations when min(x) = max(x)
+	* In this setup, x is a useless predictor (by definition) 
+	* Previously caused an error when using orthogonalized = TRUE
+	* Updated version handles orthogonalization when min(x) = max(x) 
+   3) cv.grpnet: new arguments for adaptive estimation of penalty weights
+	* adaptive = T/F argument activates adaptive estimation
+	* power = exponent used in defining adaptive weights
+   4) Changed default "s" value for coef.cv.grpnet
+	* Previously used "lambda.min" as default
+	* Now uses "lambda.1se" as default
+   5) Improvements to internals of cv.grpnet
+	* Previously required passing penalty to pass penalty.factor
+	* Now it is possible to pass penalty.factor w/o passing penalty
+
+
+
 Version 0.5   (2024-07-12)
 
    1) Bug fix in cv.grpnet() for multinomial response with matrix input

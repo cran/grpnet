@@ -3,11 +3,11 @@
 
 coef.cv.grpnet <-
   function(object, 
-           s = c("lambda.min", "lambda.1se"),
+           s = c("lambda.1se", "lambda.min"),
            ...){
     # coefficients from a fit cv.grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-07-05
+    # Updated: 2024-10-06
     
     
     ### check object

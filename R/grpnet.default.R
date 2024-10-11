@@ -26,7 +26,7 @@ grpnet.default <-
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-07-10
+    # Updated: 2024-10-06
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -260,14 +260,20 @@ grpnet.default <-
         nk <- length(id)
         xtemp <- wsqrt * x[,id]
         if(nk == 1L){
-          xproj[[k]] <- 1 / sqrt(mean((xtemp - mean(xtemp))^2))
+          xksd <- sqrt(mean((xtemp - mean(xtemp))^2))
+          if(xksd <= sqrt(.Machine$double.eps)) xksd <- 1
+          xproj[[k]] <- 1 / xksd
           x[,id] <- x[,id] * xproj[[k]]
         } else {
           xeig <- eigen(crossprod(xtemp - matrix(colMeans(xtemp), nobs, nk, byrow = TRUE))/nobs, symmetric = TRUE)
           xrank <- sum(xeig$values > xeig$values[1] * nk * .Machine$double.eps)
-          xproj[[k]] <- xeig$vectors[,1:xrank,drop=FALSE] %*% diag(1/sqrt(xeig$values[1:xrank]), xrank, xrank)
-          if(xrank < nk){
-            xproj[[k]] <- cbind(xproj[[k]], matrix(0.0, nk, nk - xrank))
+          if(xrank == 0L){
+            xproj[[k]] <- diag(nk)
+          } else {
+            xproj[[k]] <- xeig$vectors[,1:xrank,drop=FALSE] %*% diag(1/sqrt(xeig$values[1:xrank]), xrank, xrank)
+            if(xrank < nk){
+              xproj[[k]] <- cbind(xproj[[k]], matrix(0.0, nk, nk - xrank))
+            }
           }
           x[,id] <- x[,id] %*% xproj[[k]]
         }

@@ -10,7 +10,7 @@ Obtain coefficients from a cross-validated group elastic net regularized GLM (cv
 }
 \usage{
 \method{coef}{cv.grpnet}(object, 
-     s = c("lambda.min", "lambda.1se"),
+     s = c("lambda.1se", "lambda.min"),
      ...)
      
 \method{coef}{grpnet}(object, 
@@ -23,7 +23,7 @@ Obtain coefficients from a cross-validated group elastic net regularized GLM (cv
 Object of class "cv.grpnet" or "grpnet"
 }
 \item{s}{
-Lambda value(s) at which predictions should be obtained. For "cv.grpnet" objects, default uses the lambda that minimizes the cross-validation loss function. For "grpnet" objects, default uses \code{s = object$lambda}. Interpolation is used for \code{s} values that are not included in \code{object$lambda}.  
+Lambda value(s) at which predictions should be obtained. For "cv.grpnet" objects, default uses the 1se solution. For "grpnet" objects, default uses \code{s = object$lambda}. Interpolation is used for \code{s} values that are not included in \code{object$lambda}.  
 }
 \item{...}{
 Additional arguments (ignored)
