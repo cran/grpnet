@@ -5,7 +5,7 @@ R_grpnet_gamma <-
            nzgrps, nzcoef, edfs, devs, nulldev){
     # grpnet_gamma.f90 translation to R
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-06-28
+    # Updated: 2025-01-15
     
     
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
@@ -130,7 +130,7 @@ R_grpnet_gamma <-
             grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
             zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / xev[k]
             difbeta[ia[k]:ib[k]] <- zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
-            maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(difbeta[ia[k]:ib[k]])) )
+            maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
             beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
             eta <- eta + (x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]) / w
             mu <- exp(eta)

@@ -69,17 +69,17 @@ For most response variables, the typical output will be...
 \item{*}{a matrix of dimension \code{c(newnobs, length(s))} if \code{length(s) > 1}}
 \item{*}{a vector of length \code{newnobs} if length(s) == 1}
 
-For multinomial response variables, the typical output will be... 
+For multigaussian and multinomial response variables, the typical output will be... 
 \item{*}{an array of dimension \code{c(newnobs, length(object$ylev), length(s))} if \code{type \%in\% c("link", "response")}}
 \item{*}{a matrix of dimension \code{c(newobs, length(s))} if \code{type == "class"}}
 
 Note: if \code{type == "class"}, then the output will be the same class as \code{object$ylev}. Otherwise, the output will be real-valued (or integer for the counts).
 
-If \code{type == "terms"} and \code{family != "multinomial"}, the output will be...
+If \code{type == "terms"} and \code{!(family \%in\% c("multigaussian","multinomial"))}, the output will be...
 \item{*}{an array of dimension \code{c(newnobs, nterms, length(s))} if \code{length(s) > 1}}
 \item{*}{a matrix of dimension \code{c(newnobs, nterms)} if \code{length(s) == 1}}
 
-If \code{type == "terms"} and \code{family == "multinomial"}, the output will be a list of length \code{length(object$ylev)} where each element gives the terms for the corresponding response class.
+If \code{type == "terms"} and \code{family \%in\% c("multigaussian","multinomial")}, the output will be a list of length \code{length(object$ylev)} where each element gives the terms for the corresponding response dimension/class.
 
 If \code{type == "importance"} and \code{family != "multinomial"}, the output will be...
 \item{*}{a matrix of dimension \code{c(nterms, length(s))} if \code{length(s) > 1}}

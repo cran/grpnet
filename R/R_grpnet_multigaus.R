@@ -1,18 +1,18 @@
-R_grpnet_negbin <-
-  function(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, 
-           nlam, lambda, lmr, penid, gamma, eps, maxit,
+R_grpnet_multigaus <-
+  function(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw, 
+           alpha, nlam, lambda, lmr, penid, gamma, eps, maxit,
            standardize, intercept, ibeta, betas, iters,
-           nzgrps, nzcoef, edfs, devs, nulldev, theta){
-    # grpnet_negbin.f90 translation to R
+           nzgrps, nzcoef, edfs, devs, nulldev){
+    # grpnet_gaussian.f90 translation to R
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-15
+    # Updated: 2025-01-17
     
     
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
     ia <- ib <- rep(NA, ngrps)
     xmean <- rep(NA, nvars)
     xev <- rep(NA, ngrps)
-    difbeta <- rep(NA, nvars)
+    difbeta <- matrix(NA, nvars, nresp)
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
     
     
@@ -24,15 +24,17 @@ R_grpnet_negbin <-
     # ! --------------- CHECK WEIGHTS --------------- ! #
     wmin <- min(w)
     wmax <- max(w)
+    wmat <- matrix(1.0, nobs, nresp)
     if(wmax > wmin){
-      weighted <- 1L
       w <- nobs * w / sum(w)     # ! normalize so SUM(w) = nobs
       w <- sqrt(w)
+      wmat <- matrix(w, nobs, nresp)
+      y <- wmat * y
+      off <- wmat * off
       for(i in 1:nobs){
         x[i,] <- w[i] * x[i,]
       }
     } else {
-      weighted <- 0L
       w <- rep(1.0, nobs)
     }
     # ! --------------- CHECK WEIGHTS --------------- ! #
@@ -87,15 +89,12 @@ R_grpnet_negbin <-
     iter <- 0L
     active <- strong <- rep(0L, ngrps)
     nzgrps <- nzcoef <- rep(0L, nlam)
-    ibeta <- rep(0.0, nlam)
-    beta <- zvec <- grad <- rep(0.0, nvars)
+    ibeta <- matrix(0.0, nresp, nlam)
+    beta <- zvec <- grad <- matrix(0.0, nvars, nresp)
     gradnorm <- rep(0.0, ngrps)
     twolam <- 0.0
     devs <- rep(0.0, nlam)
-    eta <- off
-    mu <- exp(eta)
-    r <- w * (y - mu) / (1 + mu / theta)
-    ymax <- max(y / (1 + y / theta))
+    r <- y - off
     # ! --------------- MISCELLANEOUS INITIALIZATIONS --------------- ! #
     
     
@@ -124,33 +123,26 @@ R_grpnet_negbin <-
           ctol <- 0.0
           iter <- iter + 1L
           
-          # ! update vmax
-          vmax <- max(max(mu / (1 + mu / theta)), ymax)
-          
           # ! update active groups
           for(k in 1:ngrps){
             if(active[k] == 0L) next
-            grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
-            zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / (xev[k] * vmax)
-            difbeta[ia[k]:ib[k]] <- zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
-            maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
-            beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
-            eta <- eta + (x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]) / w
-            mu <- exp(eta)
-            r <- w * (y - mu) / (1 + mu / theta)
+            grad[ia[k]:ib[k],] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+            zvec[ia[k]:ib[k],] <- beta[ia[k]:ib[k],] + grad[ia[k]:ib[k],] / xev[k]
+            difbeta[ia[k]:ib[k],] <- zvec[ia[k]:ib[k],] - beta[ia[k]:ib[k],]
+            maxdif <- max( abs(difbeta[ia[k]:ib[k],]) / (1.0 + abs(beta[ia[k]:ib[k],])) )
+            beta[ia[k]:ib[k],] <- beta[ia[k]:ib[k],] + difbeta[ia[k]:ib[k],]
+            r <- r - x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k],]
             ctol <- max(maxdif, ctol)
           } # ! k=1,ngrps
           
           # ! update intercept
           if(intercept == 1L){
-            difibeta <- ( sum(r * w) / nobs ) / vmax
-            maxdif <- abs(difibeta) / (1.0 + abs(ibeta[i]))
-            ibeta[i] <- ibeta[i] + difibeta
-            eta <- eta + difibeta
-            mu <- exp(eta)
-            r <- w * (y - mu) / (1 + mu / theta)
+            difibeta <- colSums(r * wmat) / nobs
+            maxdif <- abs(difibeta) / (1.0 + abs(ibeta[,i]))
+            ibeta[,i] <- ibeta[,i] + difibeta
+            r <- r - outer(w, difibeta)
             ctol <- max(maxdif, ctol)
-          } # ! (intercept == 1)
+          } # if(intercept == 1L)
           
           # ! convergence check
           if(ctol < eps) break
@@ -162,10 +154,8 @@ R_grpnet_negbin <-
         # ! intercept only
         iter <- 1L
         if(intercept == 1L){
-          ibeta[i] <- log( sum(y * w^2) / nobs )
-          eta <- eta + ibeta[i]
-          mu <- exp(eta)
-          r <- w * (y - mu) / (1 + mu / theta)
+          ibeta[,i] <- colSums(r * wmat) / nobs
+          r <- r - outer(w, ibeta[,i])
         }
         
       } # ! (nzgrps[i] > 0)
@@ -174,8 +164,8 @@ R_grpnet_negbin <-
       # ! create lambda sequence ! #
       for(k in 1:ngrps){
         if(pw[k] > macheps){
-          grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
-          gradnorm[k] <- sqrt( sum(grad[ia[k]:ib[k]]^2) ) / pw[k]
+          grad[ia[k]:ib[k],] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+          gradnorm[k] <- sqrt( sum(grad[ia[k]:ib[k],]^2) ) / pw[k]
         }
       }
       if(alpha > macheps){
@@ -194,16 +184,13 @@ R_grpnet_negbin <-
       }
       # ! create lambda sequence ! #
       
-      # ! calculate deviance ! #
-      devs[i] <- R_grpnet_negbin_dev(nobs, y, mu, w^2, theta)
-      # ! calculate deviance ! #
-      
       # ! save results ! # 
-      betas[,i] <- beta
+      betas[,,i] <- beta
       iters[i] <- iter
       nzgrps[i] <- nzgrps[i] + intercept
-      nzcoef[i] <- nzcoef[i] + intercept
+      nzcoef[i] <- nzcoef[i] + intercept * nresp
       edfs[i] <- as.numeric(nzcoef[i])
+      devs[i] <- sum(r^2)
       # ! save results ! # 
       
     }
@@ -216,8 +203,8 @@ R_grpnet_negbin <-
       # ! initializations ! # 
       if(i == 1L && makelambda == 1L) next
       if(i > 1L){
-        ibeta[i] <- ibeta[i-1]
-        beta <- betas[,i-1]
+        ibeta[,i] <- ibeta[,i-1]
+        beta <- betas[,,i-1]
         twolam <- alpha * (2.0 * lambda[i] - lambda[i-1])
       } else {
         grad <- crossprod(x, r) / nobs
@@ -226,7 +213,7 @@ R_grpnet_negbin <-
       
       # ! strong rule initialization ! #
       for(k in 1:ngrps){
-        gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k]]^2))
+        gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k],]^2))
         if(gradnorm[k] + 1e-8 > pw[k] * twolam){
           strong[k] <- 1L
         } else {
@@ -251,85 +238,36 @@ R_grpnet_negbin <-
             edfs[i] <- 0.0
             ctol <- 0.0
             
-            # ! update vmax
-            vmax <- max(max(mu / (1 + mu / theta)), ymax)
+            # ! update active groups
+            for(k in 1:ngrps){
+              if(active[k] == 0L) next
+              penone <- alpha * lambda[i] * pw[k] / xev[k]
+              pentwo <- (1 - alpha) * lambda[i] * pw[k] / xev[k]
+              grad[ia[k]:ib[k],] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+              zvec[ia[k]:ib[k],] <- beta[ia[k]:ib[k],] + grad[ia[k]:ib[k],] / xev[k]
+              znorm <- sqrt(sum(zvec[ia[k]:ib[k],]^2))
+              bnorm <- sqrt(sum(beta[ia[k]:ib[k],]^2))
+              shrink <- R_grpnet_penalty(znorm, penid, penone, pentwo, gamma)
+              if(shrink == 0.0 && bnorm == 0.0) next
+              difbeta[ia[k]:ib[k],] <- shrink * zvec[ia[k]:ib[k],] - beta[ia[k]:ib[k],]
+              maxdif <- max( abs(difbeta[ia[k]:ib[k],]) / (1.0 + abs(beta[ia[k]:ib[k],])) )
+              beta[ia[k]:ib[k],] <- beta[ia[k]:ib[k],] + difbeta[ia[k]:ib[k],]
+              r <- r - x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k],]
+              ctol <- max(maxdif , ctol)
+              if(shrink > 0.0){
+                nzgrps[i] <- nzgrps[i] + 1L
+                edfs[i] <- edfs[i] + gsize[k] * shrink
+              }
+            } # ! k=1,ngrps
             
-            # ! unweighted or weighted update?
-            if(weighted == 0L){
-              
-              # ! update active groups
-              for(k in 1:ngrps){
-                if(active[k] == 0L) next
-                penone <- alpha * lambda[i] * pw[k] / (xev[k] * vmax)
-                pentwo <- (1.0 - alpha) * lambda[i] * pw[k] / (xev[k] * vmax)
-                grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
-                zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / (xev[k] * vmax)
-                znorm <- sqrt(sum(zvec[ia[k]:ib[k]]^2))
-                bnorm <- sqrt(sum(beta[ia[k]:ib[k]]^2))
-                shrink <- R_grpnet_penalty(znorm, penid, penone, pentwo, gamma)
-                if(shrink == 0.0 && bnorm == 0.0) next
-                difbeta[ia[k]:ib[k]] <- shrink * zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
-                maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
-                beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
-                eta <- eta + x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]
-                mu <- exp(eta)
-                r <- (y - mu) / (1 + mu / theta)
-                ctol <- max(maxdif , ctol)
-                if(shrink > 0.0){
-                  nzgrps[i] <- nzgrps[i] + 1L
-                  edfs[i] <- edfs[i] + gsize[k] * shrink
-                }
-              } # ! k=1,ngrps
-              
-              # ! update intercept
-              if(intercept == 1L){
-                difibeta <- ( sum(r) / nobs ) / vmax
-                maxdif <- abs(difibeta) / (1 + abs(ibeta[i]))
-                ibeta[i] <- ibeta[i] + difibeta
-                eta <- eta + difibeta
-                mu <- exp(eta)
-                r <- (y - mu) / (1 + mu / theta)
-                ctol <- max(maxdif, ctol)
-              } # ! (intercept == 1)
-              
-            } else {
-              
-              # ! update active groups
-              for(k in 1:ngrps){
-                if(active[k] == 0L) next
-                penone <- alpha * lambda[i] * pw[k] / (xev[k] * vmax)
-                pentwo <- (1 - alpha) * lambda[i] * pw[k] / (xev[k] * vmax)
-                grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
-                zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / (xev[k] * vmax)
-                znorm <- sqrt(sum(zvec[ia[k]:ib[k]]^2))
-                bnorm <- sqrt(sum(beta[ia[k]:ib[k]]^2))
-                shrink <- R_grpnet_penalty(znorm, penid, penone, pentwo, gamma)
-                if(shrink == 0.0 && bnorm == 0.0) next
-                difbeta[ia[k]:ib[k]] <- shrink * zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
-                maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
-                beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
-                eta <- eta + (x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]) / w
-                mu <- exp(eta)
-                r <- w * (y - mu) / (1 + mu / theta)
-                ctol <- max(maxdif , ctol)
-                if(shrink > 0.0){
-                  nzgrps[i] <- nzgrps[i] + 1L
-                  edfs[i] <- edfs[i] + gsize[k] * shrink
-                }
-              } # ! k=1,ngrps
-              
-              # ! update intercept
-              if(intercept == 1L){
-                difibeta <- ( sum(r * w) / nobs ) / vmax
-                maxdif <- abs(difibeta) / (1 + abs(ibeta[i]))
-                ibeta[i] <- ibeta[i] + difibeta
-                eta <- eta + difibeta
-                mu <- exp(eta)
-                r <- w * (y - mu) / (1 + mu / theta)
-                ctol <- max(maxdif, ctol)
-              } # ! (intercept == 1)
-              
-            } # ! IF (weighted == 0)
+            # ! update intercept
+            if(intercept == 1L){
+              difibeta <- colSums(r * wmat) / nobs
+              maxdif <- abs(difibeta) / (1 + abs(ibeta[,i]))
+              ibeta[,i] <- ibeta[,i] + difibeta
+              r <- r - outer(w, difibeta)
+              ctol <- max(maxdif, ctol)
+            } # ! (intercept == 1)
             
             # ! convergence check
             if(ctol < eps) break
@@ -341,8 +279,8 @@ R_grpnet_negbin <-
           violations <- 0L
           for(k in 1:ngrps){
             if(strong[k] == 0L | active[k] == 1L) next
-            grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
-            gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k]]^2))
+            grad[ia[k]:ib[k],] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+            gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k],]^2))
             if(gradnorm[k] > alpha * lambda[i] * pw[k]){
               active[k] <- 1L
               violations <- violations + 1L
@@ -358,8 +296,8 @@ R_grpnet_negbin <-
         violations <- 0L
         for(k in 1:ngrps){
           if(strong[k] == 1L) next
-          grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
-          gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k]]^2))
+          grad[ia[k]:ib[k],] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+          gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k],]^2))
           if(gradnorm[k] + 1e-8 > alpha * lambda[i] * pw[k]){
             strong[k] <- 1
             active[k] <- 1
@@ -375,24 +313,23 @@ R_grpnet_negbin <-
       # ! calculate nzcoef ! #
       for(k in 1:ngrps){
         if(active[k] == 0L) next
-        for(l in 1:gsize[k]){
-          if(abs(beta[ia[k] + l - 1]) > macheps){
-            nzcoef[i] <- nzcoef[i] + 1L
+        for(j in 1:nresp){
+          for(l in 1:gsize[k]){
+            if(abs(beta[ia[k] + l - 1,j]) > macheps){
+              nzcoef[i] <- nzcoef[i] + 1L
+            }
           }
         }
       }
       # ! calculate nzcoef ! #
       
-      # ! calculate deviance ! #
-      devs[i] <- R_grpnet_negbin_dev(nobs, y, mu, w^2, theta)
-      # ! calculate deviance ! #
-      
       # ! save results ! #
-      betas[,i] <- beta
+      betas[,,i] <- beta
       iters[i] <- iter
       nzgrps[i] <- nzgrps[i] + intercept
-      nzcoef[i] <- nzcoef[i] + intercept
-      edfs[i] <- edfs[i] + as.numeric(intercept)
+      nzcoef[i] <- nzcoef[i] + intercept * nresp
+      edfs[i] <- edfs[i] + as.numeric(intercept * nresp)
+      devs[i] <- sum(r^2)
       # ! save results ! #
       
     }
@@ -402,16 +339,18 @@ R_grpnet_negbin <-
     # ! --------------- POST PROCESSING --------------- ! #
     if(standardize == 1L){
       for(k in 1:ngrps){
-        betas[ia[k]:ib[k],] <- betas[ia[k]:ib[k],] / xsdev[k]
+        betas[ia[k]:ib[k],,] <- betas[ia[k]:ib[k],,] / xsdev[k]
       }
     }
     if(intercept == 1L){
-      ibeta <- ibeta - xmean %*% betas
-      mu <- rep(sum(y * w^2) / nobs, nobs)
+      for(j in 1:nresp){
+        ibeta[j,] <- ibeta[j,] - crossprod(betas[,j,], xmean)
+      }
+      off <- wmat * matrix(colSums(y * wmat) / nobs, nobs, nresp, byrow = TRUE)
+      nulldev <- sum((y - off)^2)
     } else {
-      mu <- exp(off)
+      nulldev <- sum((y - off)^2)
     }
-    nulldev <- R_grpnet_negbin_dev(nobs, y, mu, w^2, theta)
     names(xsdev) <- names(pw)
     pw <- xsdev
     # ! --------------- POST PROCESSING --------------- ! #
@@ -419,7 +358,8 @@ R_grpnet_negbin <-
     
     # ! --------------- RETURN RESULTS --------------- ! #
     res <- list(nobs = nobs, 
-                nvars = nvars, 
+                nvars = nvars,
+                nresp = nresp,
                 x = x, 
                 y = y, 
                 w = w, 
@@ -437,30 +377,16 @@ R_grpnet_negbin <-
                 maxit = maxit,
                 standardize = standardize, 
                 intercept = intercept, 
-                ibeta = as.numeric(ibeta), 
+                ibeta = ibeta, 
                 betas = betas, 
                 iters = iters,
                 nzgrps = nzgrps, 
                 nzcoef = nzcoef, 
                 edfs = edfs, 
                 devs = devs, 
-                nulldev = nulldev,
-                theta = theta)
+                nulldev = nulldev)
     return(res)
     # ! --------------- RETURN RESULTS --------------- ! #
     
     
-  } # R_grpnet_negbin.R
-
-
-R_grpnet_negbin_dev <-
-  function(nobs, y, mu, wt, theta, dev){
-    dev <- 0.0
-    for(i in 1:nobs){
-      if(y[i] > 0){
-        dev <- dev + 2 * wt[i] * (y[i] * log(y[i] / mu[i]))
-      } 
-    }
-    dev <- dev - 2 * sum( wt * (y + theta) * log((y + theta) / (mu + theta)) )
-    return(dev)
-  } # R_grpnet_negbin_dev.R
+  } # R_grpnet_mvn.R

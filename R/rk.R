@@ -4,7 +4,7 @@ rk <-
            periodic = FALSE, xlev = levels(x)){
     # reproducing kernel spline basis
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2024-07-17
+    # 2025-01-21
     
     
     ######***######   NOMINAL BASIS   ######***######
@@ -17,7 +17,6 @@ rk <-
       n <- length(x)
       
       # check df and knots
-      dropone <- FALSE
       if(is.null(knots)){
         if(is.null(df)) {
           df <- nlev
@@ -28,24 +27,16 @@ rk <-
         }
         knots <- xlev[seq(1, nlev, length.out = df)]
         knots <- factor(knots, levels = xlev)
-        dropone <- TRUE
       } else {
         knots <- factor(knots, levels = xlev)
         df <- length(knots)
-        knotchar <- as.character(sort(knots))
-        if((df == nlev) && identical(knotchar, xlev)) dropone <- TRUE
       }
+      if(df < 2L) stop("Input 'df' must be greater than one.")
       
       # evaluate basis
-      mat <- outer(x, knots, FUN = "==") + 0.0
-      colnames(mat) <- knots
-      
-      # drop last column?
-      if(dropone){
-        mat <- mat[,1:(nlev-1),drop=FALSE]
-        idx <- which(x == knots[nlev])
-        if(length(idx) > 0) mat[idx,] <- -1.0
-      }
+      mat <- outer(x, knots[-df], FUN = "==") + 0.0
+      id <- which(x == knots[df])
+      mat[id,] <- -1
       
       # intercept?
       if(intercept) {
@@ -181,11 +172,13 @@ rk <-
         if(df < 1L) stop("The 'df' argument must satisfy:  df >= 1")
         if(df > n) warning("Requested 'df' is greater than the length of 'x'")
       }
-      knots <- unique(quantile(x, probs = seq(0, 1, length.out = df)))
+      knots <- quantile(x, probs = seq(0, 1, length.out = df))
     } else {
       knots <- as.numeric(knots)
-      knots <- unique(sort(c(Boundary.knots, knots)))
     }
+    
+    # combine Boundary.knots and knots
+    knots <- unique(sort(c(Boundary.knots, knots)))
     df <- length(knots)
     
     # check periodic

@@ -7,7 +7,7 @@ coef.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-07-05
+    # Updated: 2025-01-17
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -32,9 +32,9 @@ coef.grpnet <-
     ns <- length(s)
     
     
-    ######***######   MULTINOMIAL   ######***######
+    ######***######   MULTIGAUSSIAN / MULTINOMIAL   ######***######
     
-    if(object$family$family == "multinomial"){ 
+    if(object$family$family %in% c("multigaussian", "multinomial")){
       
       ### get number of response classes
       nresp <- length(object$ylev)

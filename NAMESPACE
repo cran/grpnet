@@ -7,8 +7,8 @@ export(coef.cv.grpnet, coef.grpnet, cv.compare,
        predict.cv.grpnet, predict.grpnet,
        print.coef.grpnet, print.cv.grpnet, print.grpnet,
        R_grpnet_binomial, R_grpnet_gamma, R_grpnet_gaussian, 
-       R_grpnet_invgaus, R_grpnet_maxeigval, R_grpnet_multinom, 
-       R_grpnet_negbin, R_grpnet_penalty,
+       R_grpnet_invgaus, R_grpnet_maxeigval, R_grpnet_multigaus,
+       R_grpnet_multinom, R_grpnet_negbin, R_grpnet_penalty,
        rk.model.matrix, rk, row.kronecker,
        visualize.penalty, visualize.shrink)
 

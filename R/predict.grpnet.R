@@ -12,7 +12,7 @@ predict.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2023-11-02
+    # Updated: 2025-01-17
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -41,7 +41,7 @@ predict.grpnet <-
     ### type == "nonzero"
     if(type == "nonzero"){
       coefs <- coef.grpnet(object = object, s = s)
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         return(apply(Reduce("+", lapply(coefs, function(x) abs(x) > 0)), 2, function(x) which(x > 0)))
       } else {
         return(apply(abs(coefs) > 0, 2, which))
@@ -51,7 +51,7 @@ predict.grpnet <-
     ### type == "ncoefs"
     if(type == "ncoefs"){
       coefs <- coef.grpnet(object = object, s = s)
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         return(Reduce("+", lapply(coefs, function(x) colSums(abs(x) > 0))))
       } else {
         return(colSums(abs(coefs) > 0))
@@ -60,7 +60,7 @@ predict.grpnet <-
     
     ### l2norm
     if(type %in% c("groups", "ngroups", "norm", "znorm")){
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         l2norm <- function(x) sum(x^2)
       } else {
         l2norm <- function(x) sqrt(sum(x^2))
@@ -71,7 +71,7 @@ predict.grpnet <-
     ### type == "groups"
     if(type == "groups"){
       coefs <- coef.grpnet(object = object, s = s)
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         norms <- sqrt(Reduce("+", lapply(coefs, function(x) apply(x, 2, grpnorm))))
       } else {
         norms <- apply(coefs, 2, grpnorm)
@@ -86,7 +86,7 @@ predict.grpnet <-
     ### type == "ngroups"
     if(type == "ngroups"){
       coefs <- coef.grpnet(object = object, s = s)
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         return(colSums(sqrt(Reduce("+", lapply(coefs, function(x) apply(x, 2, grpnorm)))) > 0))
       } else {
         return(colSums(apply(coefs, 2, grpnorm) > 0))
@@ -96,7 +96,7 @@ predict.grpnet <-
     ### type == "norm" or "znorm"
     if(type %in% c("norm", "znorm")){
       coefs <- coef.grpnet(object = object, s = s)
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         norms <- sqrt(Reduce("+", lapply(coefs, function(x) apply(x, 2, grpnorm))))
       } else {
         norms <- apply(coefs, 2, grpnorm)
@@ -186,7 +186,7 @@ predict.grpnet <-
       }
       
       ### multinomial or other?
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         
         ## get number of response classes
         nresp <- length(object$beta)
@@ -239,7 +239,7 @@ predict.grpnet <-
       terms <- predict.grpnet(object, newx = newx, s = s, type = "terms")
       
       ### multinomial or other?
-      if(family == "multinomial"){
+      if(family %in% c("multigaussian", "multinomial")){
         
         ## number of terms
         nterms <- dim(terms[[1]])[2]
@@ -312,11 +312,10 @@ predict.grpnet <-
     
     
     
-    ######***######   MULTINOMIAL   ######***######
-    
-    if(family == "multinomial"){ 
+    ######***######   MULTIGAUSSIAN / MULTINOMIAL   ######***######
+    if(family %in% c("multigaussian", "multinomial")){
       
-      # note: needs special code to return predictions for each response class
+      # note: special code to return predictions for each response dim / class
       
       ### get number of response classes
       nresp <- length(object$beta)
@@ -334,7 +333,7 @@ predict.grpnet <-
             fit[,k,] <- cbind(1, newx) %*% rbind(object$a0[k,], object$beta[[k]])
           }
         }
-        if(type %in% c("response", "class")) {
+        if(family == "multinomial" && type %in% c("response", "class")) {
           for(i in 1:ns) fit[,,i] <- object$family$linkinv(fit[,,i])
           if(type == "class") fit <- matrix(object$ylev[apply(fit, c(1,3), which.max)], nrow = nobs, ncol = ns)
         }
@@ -346,11 +345,13 @@ predict.grpnet <-
         for(k in 1:nresp){
           fit[,k,] <- cbind(1, newx) %*% c(object$a0[k], object$beta[[k]])
         }
-        if(type == "response") {
-          fit <- object$family$linkinv(fit)
-        } else if(type == "class"){
-          # note: family == "multinomial" is implied
-          fit <- object$ylev[apply(object$family$linkinv(fit), 1, which.max)]
+        if(family == "multinomial"){
+          if(type == "response") {
+            fit <- object$family$linkinv(fit)
+          } else if(type == "class"){
+            # note: family == "multinomial" is implied
+            fit <- object$ylev[apply(object$family$linkinv(fit), 1, which.max)]
+          }
         }
         return(fit)
       }
@@ -388,9 +389,11 @@ predict.grpnet <-
       }
       
       ### return fitted values
-      if(type %in% c("response", "class")) {
-        for(i in 1:ns) fit[,,i] <- object$family$linkinv(fit[,,i])
-        if(type == "class") fit <- matrix(object$ylev[apply(fit, c(1,3), which.max)], nrow = nobs, ncol = ns)
+      if(family == "multinomial"){
+        if(type %in% c("response", "class")) {
+          for(i in 1:ns) fit[,,i] <- object$family$linkinv(fit[,,i])
+          if(type == "class") fit <- matrix(object$ylev[apply(fit, c(1,3), which.max)], nrow = nobs, ncol = ns)
+        }
       }
       return(drop(fit))
       

@@ -37,7 +37,7 @@ Returns the coefficients that are used by the \code{\link{predict.cv.grpnet}} fu
 Returns the coefficients that are used by the \code{\link{predict.grpnet}} function to form predictions from a fit \code{\link{grpnet}} object. 
 }
 \value{
-For multinomial response variables, returns a list of length \code{length(object$ylev)}, where the \code{j}-th element is a matrix of dimension \code{c(ncoef, length(s))} giving the coefficients for \code{object$ylev[j]}.
+For multigaussian and multinomial response variables, returns a list of length \code{length(object$ylev)}, where the \code{j}-th element is a matrix of dimension \code{c(ncoef, length(s))} giving the coefficients for \code{object$ylev[j]}.
 
 For other response variables, returns a matrix of dimension \code{c(ncoef, length(s))}, where the \code{i}-th column gives the coefficients for \code{s[i]}.
 }

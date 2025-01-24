@@ -21,7 +21,7 @@ cv.grpnet.default <-
            ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-10-10
+    # Updated: 2025-01-17
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -65,9 +65,12 @@ cv.grpnet.default <-
     if(is.null(family)){
       family <- "gaussian"
     } else {
-      family <- pmatch(as.character(family[1]), c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian"))
+      family <- as.character(family[1])
+      if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
+      families <- c("gaussian", "multigaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+      family <- pmatch(family, families)
       if(is.na(family)) stop("'family' not recognized")
-      family <- c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")[family]
+      family <- families[family]
     }
     
     ### check weights
@@ -86,6 +89,19 @@ cv.grpnet.default <-
     ylev <- yfac <- NULL
     if(family == "gaussian"){
       y <- as.numeric(y)
+    } else if(family == "multigaussian"){
+      y <- as.matrix(y) + 0.0
+      if(!is.numeric(y[1,1])) stop("Input 'y' must be a numeric matrix when family = 'multigaussian'.")
+      nresp <- ncol(y)
+      ylev <- colnames(y)
+      if(is.null(ylev)){
+        ylev <- paste0("y", 1:nresp)
+        colnames(y) <- ylev
+      }
+      if(nresp == 1L){
+        y <- as.numeric(y)
+        family <- "gaussian"
+      }
     } else if(family == "binomial"){
       if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
@@ -152,7 +168,15 @@ cv.grpnet.default <-
       if(family == "multinomial") offset <- matrix(offset, nrow = nobs, ncol = nlev)
     } else {
       include.offset <- TRUE
-      if(family == "multinomial"){
+      if(family == "multigaussian"){
+        offset <- as.matrix(offset) + 0.0
+        if(nrow(offset) != nobs) stop("Inputs 'x' and 'offset' must satisfy:  nrow(x) == nrow(offset)")
+        if(ncol(offset) == 1L){
+          offset <- matrix(offset, nrow = nobs, ncol = nresp)
+        } else {
+          if(ncol(offset) != nresp) stop("Input 'offset' must be a vector of length nobs\n or a matrix of dimension nobs x ncol(y)")
+        }
+      } else if(family == "multinomial"){
         offset <- as.matrix(offset)
         if(nrow(offset) != nobs) stop("Inputs 'x' and 'offset' must satisfy:  nrow(x) == nrow(offset)")
         if(ncol(offset) == 1L){
@@ -282,7 +306,11 @@ cv.grpnet.default <-
       ### update penalty weights
       penfac0 <- mod$grpnet.fit$args$penalty.factor
       if(mod$grpnet.fit$args$orthogonalized){
-        penfac <- sqrt(colSums(predict(mod, newx = x, type = "terms")^2))
+        if(mod$grpnet.fit$family$family %in% c("multigaussian", "multinomial")){
+          penfac <- sqrt(rowSums(sapply(predict(mod, newx = x, type = "terms"), function(x) colSums(x^2))))
+        } else {
+          penfac <- sqrt(colSums(predict(mod, newx = x, type = "terms")^2))
+        }
       } else if(mod$grpnet.fit$args$standardized){
         penfac <- predict(mod, newx = x, type = "znorm")[-1]
       } else {
@@ -358,6 +386,8 @@ cv.grpnet.default <-
                                    parallel = parallel, 
                                    cluster = cluster, 
                                    verbose = FALSE,
+                                   adaptive = FALSE,
+                                   power = power,
                                    ...)
           
           # save results
@@ -424,8 +454,14 @@ cv.grpnet.default <-
     ### initialize matrix for results
     cvloss <- matrix(NA, nrow = nlambda, ncol = nfolds)
     
-    ### separate work for multinomial family
-    if(family == "multinomial"){
+    ### separate work for multigaussian and multinomial family
+    if(family == "multigaussian"){
+      
+      # standardize.response?
+      if(grpnet.fit$args$standardize.response){
+        ysd <- apply(y, 2, sd)
+        y <- y %*% diag(1 / ysd)
+      } # end if(grpnet.fit$args$standardize.response)
       
       if(parallel){
         
@@ -434,7 +470,7 @@ cv.grpnet.default <-
           function(testid, xmat, ymat, group, family, weights, offset, alpha, 
                    nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
                    gamma, theta, standardized, orthogonalized, intercept, 
-                   thresh, maxit, type.measure, same.lambda, yfac, yrowsum){
+                   thresh, maxit, proglang, type.measure, same.lambda, yfac, yrowsum){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid,,drop=FALSE], 
                            group = group, 
@@ -453,7 +489,154 @@ cv.grpnet.default <-
                            orthogonalized = orthogonalized,
                            intercept = intercept,
                            thresh = thresh,
-                           maxit = maxit)
+                           maxit = maxit,
+                           proglang = proglang)
+            mu <- predict(temp, newx = xmat[testid,,drop=FALSE], 
+                          s = if(same.lambda) NULL else lambda)
+            cvloss <- rep(NA, nlambda)
+            if(type.measure == "deviance"){
+              for(i in 1:nlambda){
+                cvloss[i] <- mean(temp$family$dev.resids(ymat[testid,], mu[,,i], weights[testid]))
+              }
+            } else if(type.measure == "mse") {
+              for(i in 1:nlambda){
+                cvloss[i] <- mean((ymat[testid,] - mu[,,i])^2)
+              }
+            } else if(type.measure == "mae"){
+              for(i in 1:nlambda){
+                cvloss[i] <- mean(abs(ymat[testid,] - mu[,,i]))
+              }
+            } 
+            return(cvloss)
+          } # end parcvloss
+        
+        # evaluate cvloss in parallel
+        cvloss <- parallel::parSapply(cl = cluster, X = fid, FUN = parcvloss,
+                                      xmat = x,
+                                      ymat = y,
+                                      group = group,
+                                      family = family,
+                                      weights = weights,
+                                      offset = offset,
+                                      alpha = grpnet.fit$alpha,
+                                      nlambda = nlambda,
+                                      lambda.min.ratio = lambda[nlambda] / lambda[1],
+                                      lambda = lambda,
+                                      penalty.factor = grpnet.fit$args$penalty.factor,
+                                      penalty = grpnet.fit$args$penalty,
+                                      gamma = grpnet.fit$args$gamma,
+                                      theta = grpnet.fit$args$theta,
+                                      standardized = grpnet.fit$args$standardized,
+                                      orthogonalized = grpnet.fit$args$orthogonalized,
+                                      intercept = grpnet.fit$args$intercept,
+                                      thresh = grpnet.fit$args$thresh,
+                                      maxit = grpnet.fit$args$maxit,
+                                      proglang = grpnet.fit$args$proglang,
+                                      type.measure = type.measure,
+                                      same.lambda = same.lambda,
+                                      yfac = yfac,
+                                      yrowsum = yrowsum)
+        
+        # unvectorize
+        cvloss <- matrix(cvloss, nrow = nlambda, ncol = nfolds)
+        
+      } else {
+        
+        for(k in 1:nfolds){
+          if(same.lambda){
+            temp <- grpnet(x = x[-fid[[k]],,drop=FALSE], 
+                           y = y[-fid[[k]],,drop=FALSE], 
+                           group = group, 
+                           family = family,
+                           weights = weights[-fid[[k]]], 
+                           offset = offset[-fid[[k]],,drop=FALSE],
+                           alpha = alpha,
+                           nlambda = nlambda,
+                           lambda.min.ratio = lambda[nlambda] / lambda[1],
+                           lambda = lambda,
+                           penalty.factor = grpnet.fit$args$penalty.factor,
+                           penalty = grpnet.fit$args$penalty,
+                           gamma = gamma,
+                           theta = grpnet.fit$args$theta,
+                           standardized = grpnet.fit$args$standardized,
+                           orthogonalized = grpnet.fit$args$orthogonalized,
+                           intercept = grpnet.fit$args$intercept,
+                           thresh = grpnet.fit$args$thresh,
+                           maxit = grpnet.fit$args$maxit,
+                           proglang = grpnet.fit$args$proglang)
+            mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], 
+                          type = ifelse(type.measure == "class", "class", "response"))
+          } else {
+            temp <- grpnet(x = x[-fid[[k]],,drop=FALSE], 
+                           y = y[-fid[[k]],,drop=FALSE], 
+                           group = group, 
+                           family = family,
+                           weights = weights[-fid[[k]]], 
+                           offset = offset[-fid[[k]],,drop=FALSE],
+                           alpha = alpha,
+                           nlambda = nlambda,
+                           lambda.min.ratio = lambda[nlambda] / lambda[1],
+                           penalty.factor = grpnet.fit$args$penalty.factor,
+                           penalty = grpnet.fit$args$penalty,
+                           gamma = gamma,
+                           theta = grpnet.fit$args$theta,
+                           standardized = grpnet.fit$args$standardized,
+                           orthogonalized = grpnet.fit$args$orthogonalized,
+                           intercept = grpnet.fit$args$intercept,
+                           thresh = grpnet.fit$args$thresh,
+                           maxit = grpnet.fit$args$maxit,
+                           proglang = grpnet.fit$args$proglang)
+            mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], s = lambda)
+          }
+          if(type.measure == "deviance"){
+            for(i in 1:nlambda) {
+              cvloss[i,k] <- mean(grpnet.fit$family$dev.resids(y[fid[[k]],], mu[,,i], weights[fid[[k]]]))
+            }
+          } else if(type.measure == "mse") {
+            for(i in 1:nlambda) {
+              cvloss[i,k] <- mean((y[fid[[k]],] - mu[,,i])^2)
+            }
+          } else if(type.measure == "mae"){
+            for(i in 1:nlambda) {
+              cvloss[i,k] <- mean(abs(y[fid[[k]],] - mu[,,i]))
+            }
+          } 
+          if(verbose) setTxtProgressBar(pbar, k + 1)
+        } # end for(k in 1:nfolds)
+        if(verbose) close(pbar)
+        
+      } # end if(parallel)
+      
+    } else if(family == "multinomial"){
+      
+      if(parallel){
+        
+        # define parcvloss function
+        parcvloss <-
+          function(testid, xmat, ymat, group, family, weights, offset, alpha, 
+                   nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
+                   gamma, theta, standardized, orthogonalized, intercept, 
+                   thresh, maxit, proglang, type.measure, same.lambda, yfac, yrowsum){
+            temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
+                           y = ymat[-testid,,drop=FALSE], 
+                           group = group, 
+                           family = family,
+                           weights = weights[-testid], 
+                           offset = offset[-testid,],
+                           alpha = alpha,
+                           nlambda = nlambda,
+                           lambda.min.ratio = lambda.min.ratio,
+                           lambda = if(same.lambda) lambda else NULL,
+                           penalty.factor = penalty.factor,
+                           penalty = penalty,
+                           gamma = gamma, 
+                           theta = theta,
+                           standardized = standardized,
+                           orthogonalized = orthogonalized,
+                           intercept = intercept,
+                           thresh = thresh,
+                           maxit = maxit,
+                           proglang = proglang)
             temp$ylev <- levels(yfac)
             mu <- predict(temp, newx = xmat[testid,,drop=FALSE], 
                           s = if(same.lambda) NULL else lambda,
@@ -500,6 +683,7 @@ cv.grpnet.default <-
                                       intercept = grpnet.fit$args$intercept,
                                       thresh = grpnet.fit$args$thresh,
                                       maxit = grpnet.fit$args$maxit,
+                                      proglang = grpnet.fit$args$proglang,
                                       type.measure = type.measure,
                                       same.lambda = same.lambda,
                                       yfac = yfac,
@@ -569,7 +753,7 @@ cv.grpnet.default <-
           function(testid, xmat, ymat, group, family, weights, offset, alpha, 
                    nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
                    gamma, theta, standardized, orthogonalized, intercept, 
-                   thresh, maxit, type.measure, same.lambda, yfac, yrowsum){
+                   thresh, maxit, proglang, type.measure, same.lambda, yfac, yrowsum){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid], 
                            group = group, 
@@ -588,7 +772,8 @@ cv.grpnet.default <-
                            orthogonalized = orthogonalized,
                            intercept = intercept,
                            thresh = thresh,
-                           maxit = maxit)
+                           maxit = maxit,
+                           proglang = proglang)
             temp$ylev <- levels(yfac)
             mu <- predict(temp, newx = xmat[testid,,drop=FALSE], 
                           s = if(same.lambda) NULL else lambda,
@@ -626,6 +811,7 @@ cv.grpnet.default <-
                                       intercept = grpnet.fit$args$intercept,
                                       thresh = grpnet.fit$args$thresh,
                                       maxit = grpnet.fit$args$maxit,
+                                      proglang = grpnet.fit$args$proglang,
                                       type.measure = type.measure,
                                       same.lambda = same.lambda,
                                       yfac = yfac)
@@ -675,7 +861,7 @@ cv.grpnet.default <-
         if(verbose) close(pbar)
       } # end if(parallel)
       
-    } # end if(family == "multinomial")
+    } # end if(family == "multigaussian")
     
     
     ######***######   RESULTS   ######***######

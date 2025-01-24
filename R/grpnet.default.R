@@ -5,8 +5,10 @@ grpnet.default <-
   function(x,
            y,
            group,
-           family = c("gaussian", "binomial", "multinomial", "poisson", 
-                      "negative.binomial", "Gamma", "inverse.gaussian"),
+           family = c("gaussian", "multigaussian", 
+                      "binomial", "multinomial", 
+                      "poisson", "negative.binomial", 
+                      "Gamma", "inverse.gaussian"),
            weights = NULL,
            offset = NULL,
            alpha = 1,
@@ -23,10 +25,11 @@ grpnet.default <-
            thresh = 1e-04,
            maxit = 1e05,
            proglang = c("Fortran", "R"),
+           standardize.response = FALSE,
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-10-06
+    # Updated: 2025-01-17
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -66,9 +69,12 @@ grpnet.default <-
     gnames <- names(gsize)
     
     ### check family
-    family <- pmatch(as.character(family[1]), c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian"))
+    family <- as.character(family[1])
+    if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
+    families <- c("gaussian", "multigaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+    family <- pmatch(family, families)
     if(is.na(family)) stop("'family' not recognized")
-    family <- c("gaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")[family]
+    family <- families[family]
     family <- family.grpnet(family, theta)
     
     ### check weights
@@ -88,6 +94,19 @@ grpnet.default <-
     ylev <- NULL
     if(family$family == "gaussian"){
       y <- as.numeric(y)
+    } else if(family$family == "multigaussian"){
+      y <- as.matrix(y) + 0.0
+      if(!is.numeric(y[1,1])) stop("Input 'y' must be a numeric matrix when family = 'multigaussian'.")
+      nresp <- ncol(y)
+      ylev <- colnames(y)
+      if(is.null(ylev)){
+        ylev <- paste0("y", 1:nresp)
+        colnames(y) <- ylev
+      }
+      if(nresp == 1L){
+        y <- as.numeric(y)
+        family <- gaussian()
+      }
     } else if(family$family == "binomial"){
       if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
@@ -153,10 +172,19 @@ grpnet.default <-
     if(is.null(offset)){
       include.offset <- FALSE
       offset <- rep(0.0, nobs)
+      if(family$family == "multigaussian") offset <- matrix(offset, nrow = nobs, ncol = nresp)
       if(family$family == "multinomial") offset <- matrix(offset, nrow = nobs, ncol = nlev)
     } else {
       include.offset <- TRUE
-      if(family$family == "multinomial"){
+      if(family$family == "multigaussian"){
+        offset <- as.matrix(offset) + 0.0
+        if(nrow(offset) != nobs) stop("Inputs 'x' and 'offset' must satisfy:  nrow(x) == nrow(offset)")
+        if(ncol(offset) == 1L){
+          offset <- matrix(offset, nrow = nobs, ncol = nresp)
+        } else {
+          if(ncol(offset) != nresp) stop("Input 'offset' must be a vector of length nobs\n or a matrix of dimension nobs x ncol(y)")
+        }
+      } else if(family$family == "multinomial"){
         offset <- as.matrix(offset) + 0.0
         if(nrow(offset) != nobs) stop("Inputs 'x' and 'offset' must satisfy:  nrow(x) == nrow(offset)")
         if(ncol(offset) == 1L){
@@ -248,6 +276,19 @@ grpnet.default <-
       stop("Input 'proglang' must be 'Fortran' or 'R'.")
     }
     proglang <- proglangs[proglang]
+    
+    ### check standardize.response
+    if(family$family == "multigaussian"){
+      standardize.response <- as.logical(standardize.response[1])
+      if(standardize.response){
+        ysd <- apply(y, 2, sd)
+        idx <- which(ysd == 0)
+        if(length(idx) > 0){
+          ysd[idx] <- 1.0
+        }
+        y <- y %*% diag(1/ysd)
+      }
+    }
     
     
     ######***######   WORK   ######***######
@@ -343,6 +384,82 @@ grpnet.default <-
                                  nulldev = 0.0)
         
       } # end if(proglang == "Fortran")
+      
+    } else if(family$family == "multigaussian"){
+      
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_multigaus",
+                        nobs = nobs,
+                        nvars = nvars,
+                        nresp = nresp,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = matrix(0.0, nrow = nresp, ncol = nlambda),
+                        betas = array(0.0, dim = c(nvars, nresp, nlambda)),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_multigaus(nobs = nobs,
+                                  nvars = nvars,
+                                  nresp = nlev,
+                                  x = x,
+                                  y = y,
+                                  w = weights,
+                                  off = offset,
+                                  ngrps = ngrps,
+                                  gsize = gsize, 
+                                  pw = penalty.factor,
+                                  alpha = alpha,
+                                  nlam = nlambda,
+                                  lambda = lambda,
+                                  lmr = lambda.min.ratio, 
+                                  penid = penalty,
+                                  gamma = gamma,
+                                  eps = thresh,
+                                  maxit = maxit,
+                                  standardize = as.integer(standardized),
+                                  intercept = as.integer(intercept),
+                                  ibeta = matrix(0.0, nrow = nresp, ncol = nlambda),
+                                  betas = array(0.0, dim = c(nvars, nresp, nlambda)),
+                                  iters = rep(0L, nlambda),
+                                  nzgrps = rep(0L, nlambda),
+                                  nzcoef = rep(0L, nlambda),
+                                  edfs = rep(0.0, nlambda),
+                                  devs = rep(0.0, nlambda),
+                                  nulldev = 0.0)
+      } # end if(proglang == "Fortran")
+      
+      ## post-process coefs
+      rownames(res$ibeta) <- ylev
+      colnames(res$ibeta) <- paste0("s", 1:nlambda)
+      betas <- vector("list", nresp)
+      names(betas) <- ylev
+      for(j in 1:nresp) {
+        betas[[j]] <- res$betas[,j,]
+        rownames(betas[[j]]) <- xnames
+        colnames(betas[[j]]) <- paste0("s", 1:nlambda)
+      }
+      res$betas <- betas
       
     } else if(family$family == "binomial"){
       
@@ -739,7 +856,21 @@ grpnet.default <-
     
     ### orthognalize?
     if(orthogonalized){
-      if(family$family == "multinomial"){
+      if(family$family == "multigaussian"){
+        for(k in 1:ngrps){
+          id <- which(group == k)
+          nk <- length(id)
+          if(nk == 1L){
+            for(l in 1:nresp){
+              res$betas[[l]][id,] <- res$betas[[l]][id,] * xproj[[k]]
+            }
+          } else {
+            for(l in 1:nresp){
+              res$betas[[l]][id,] <- xproj[[k]] %*% res$betas[[l]][id,]
+            }
+          }
+        }
+      } else if(family$family == "multinomial"){
         for(k in 1:ngrps){
           id <- which(group == k)
           nk <- length(id)
@@ -766,8 +897,16 @@ grpnet.default <-
       } # end if(family == "multinomial")
     } # end if(orthogonalized)
     
+    ## unstandardize response (if applicable)
+    if(family$family == "multigaussian" && standardize.response){
+      for(j in 1:nresp){
+        res$ibeta[j,] <- res$ibeta[j,] * ysd[j]
+        res$betas[[j]] <- res$betas[[j]] * ysd[j]
+      }
+    }
+    
     ## name coefficients
-    if(family$family != "multinomial"){
+    if(!(family$family %in% c("multigaussian", "multinomial"))){
       rownames(res$betas) <- xnames
       colnames(res$betas) <- paste0("s", 1:nlambda)
     }
@@ -781,7 +920,9 @@ grpnet.default <-
                  orthogonalized = orthogonalized,
                  intercept = intercept,
                  thresh = thresh,
-                 maxit = maxit)
+                 maxit = maxit,
+                 proglang = proglang,
+                 standardize.response = standardize.response)
     
     ## intercept
     if(intercept){

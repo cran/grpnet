@@ -93,6 +93,29 @@ mean(abs(auto$mpg - fit.min))
 
 
 
+######***######   family = "multigaussian"   ######***######
+
+# load data
+data(auto)
+
+# 10-fold cv (formula method, response = (mpg, displacement))
+y <- as.matrix(auto[,c(1,3)])
+set.seed(1)
+mod <- cv.grpnet(y ~ ., data = auto[,-c(1,3)], family = "multigaussian",
+                 standardize.response = TRUE)
+
+# get fitted values at "lambda.1se"
+fit.1se <- predict(mod, newdata = auto)
+
+# get fitted values at "lambda.min"
+fit.min <- predict(mod, newdata = auto, s = "lambda.min")
+
+# compare mean absolute error for two solutions
+mean(abs(y - fit.1se))
+mean(abs(y - fit.min))
+
+
+
 ######***######   family = "binomial"   ######***######
 
 # load data

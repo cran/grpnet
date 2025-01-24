@@ -13,7 +13,7 @@ family.grpnet(object, theta = 1)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{object}{
-one of the following characters specifying the exponential family: \code{"gaussian"}, \code{"binomial"}, \code{"multinomial"}, \code{"poisson"}, \code{"negative.binomial"}, \code{"Gamma"}, \code{"inverse.gaussian"}}
+one of the following characters specifying the exponential family: \code{"gaussian"}, \code{"multigaussian"}, \code{"binomial"}, \code{"multinomial"}, \code{"poisson"}, \code{"negative.binomial"}, \code{"Gamma"}, \code{"inverse.gaussian"}}
 \item{theta}{
 Additional ("size") parameter for negative binomial responses, where the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
 }
@@ -21,6 +21,7 @@ Additional ("size") parameter for negative binomial responses, where the varianc
 \details{
 There is only one available link function for each \code{family}: \cr
 * gaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
+* multigaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
 * binomial (logit): \eqn{\log(\frac{\pi}{1 - \pi}) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * multinomial (symmetric): \eqn{\pi_\ell = \frac{\exp(\mathbf{X}^\top \boldsymbol\beta_\ell)}{\sum_{l = 1}^m \exp(\mathbf{X}^\top \boldsymbol\beta_l)}} \cr
 * poisson (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
@@ -53,6 +54,8 @@ For \code{gaussian} family, this returns the full output produced by \code{\link
 }
 \examples{
 family.grpnet("gaussian")
+
+family.grpnet("multigaussian")
 
 family.grpnet("binomial")
 

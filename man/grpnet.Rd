@@ -14,8 +14,10 @@ grpnet(x, \dots)
 \method{grpnet}{default}(x, 
        y, 
        group, 
-       family = c("gaussian", "binomial", "multinomial", "poisson", 
-                  "negative.binomial", "Gamma", "inverse.gaussian"),
+       family = c("gaussian", "multigaussian",
+                  "binomial", "multinomial", 
+                  "poisson", "negative.binomial", 
+                  "Gamma", "inverse.gaussian"),
        weights = NULL, 
        offset = NULL, 
        alpha = 1, 
@@ -32,13 +34,16 @@ grpnet(x, \dots)
        thresh = 1e-04, 
        maxit = 1e05,
        proglang = c("Fortran", "R"),
+       standardize.response = FALSE,
        ...)
       
 \method{grpnet}{formula}(formula,
        data, 
        use.rk = TRUE,
-       family = c("gaussian", "binomial", "multinomial", "poisson", 
-                  "negative.binomial", "Gamma", "inverse.gaussian"),
+       family = c("gaussian", "multigaussian",
+                  "binomial", "multinomial", 
+                  "poisson", "negative.binomial", 
+                  "Gamma", "inverse.gaussian"),
        weights = NULL,
        offset = NULL,
        alpha = 1,
@@ -54,6 +59,7 @@ grpnet(x, \dots)
        thresh = 1e-04,
        maxit = 1e05,
        proglang = c("Fortran", "R"),
+       standardize.response = FALSE,
        ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -77,7 +83,7 @@ Optional data frame containing the variables referenced in \code{formula}.
 If \code{TRUE} (default), the \code{\link{rk.model.matrix}} function is used to build the model matrix. Otherwise, the \code{\link{model.matrix}} function is used to build the model matrix. Additional arguments to the \code{\link{rk.model.matrix}} function can be passed via the \code{...} argument.
 }
   \item{family}{
-Character specifying the assumed distribution for the response variable. Partial matching is allowed. Options include \code{"gaussian"} (real-valued response), \code{"binomial"} (binary response), \code{"multinomial"} (multi-class response), \code{"poisson"} (count response), \code{"negative.binomial"} (count response), \code{"Gamma"} (positive real-valued), or \code{"inverse.gaussian"} (positive real-valued). 
+Character specifying the assumed distribution for the response variable. Partial matching is allowed. Options include \code{"gaussian"} (real-valued vector), \code{"multigaussian"} (real-valued matrix), \code{"binomial"} (binary response), \code{"multinomial"} (multi-class response), \code{"poisson"} (count response), \code{"negative.binomial"} (count response), \code{"Gamma"} (positive real-valued), or \code{"inverse.gaussian"} (positive real-valued). 
 }
   \item{weights}{
 Optional vector of length \eqn{n} with non-negative weights to use for weighted (penalized) likelihood estimation. Defaults to a vector of ones.
@@ -128,6 +134,9 @@ Maximum number of iterations to allow.
 }
   \item{proglang}{
 Which programming language should be used to implement the ABGD algorithm? Options include \code{"Fortran"} (default) or \code{"R"}.
+}
+  \item{standardize.response}{
+Should columns of response be standardized to have unit variance before fitting the model? Only applicable when \code{family = "multigaussian"}. Note that coefficients are returned on the original (unstandardized) scale regardless of this input.
 }
   \item{\dots}{
 Additional arguments used by the default or formula method.
@@ -278,6 +287,24 @@ plot(mod)
 
 
 \donttest{
+######***######   family = "multigaussian"   ######***######
+
+# load data
+data(auto)
+
+# fit model (formula method, response = (mpg, displacement))
+y <- as.matrix(auto[,c(1,3)])
+mod <- grpnet(y ~ ., data = auto[,-c(1,3)], family = "multigaussian",
+              standardize.response = TRUE)
+
+# print regularization path info
+mod
+
+# plot coefficient paths
+plot(mod)
+
+
+
 ######***######   family = "binomial"   ######***######
 
 # load data

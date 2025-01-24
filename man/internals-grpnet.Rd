@@ -4,6 +4,7 @@
 \alias{R_grpnet_gamma}
 \alias{R_grpnet_gaussian}
 \alias{R_grpnet_invgaus}
+\alias{R_grpnet_multigaus}
 \alias{R_grpnet_multinom}
 \alias{R_grpnet_negbin}
 \alias{R_grpnet_poisson}
@@ -49,6 +50,12 @@ R_grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha,
                  nlam, lambda, lmr, penid, gamma, eps, maxit,
                  standardize, intercept, ibeta, betas, iters,
                  nzgrps, nzcoef, edfs, devs, nulldev)
+
+# R translation of grpnet_multigaus.f90
+R_grpnet_multigaus(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw, 
+                   alpha, nlam, lambda, lmr, penid, gamma, eps, maxit,
+                   standardize, intercept, ibeta, betas, iters,
+                   nzgrps, nzcoef, edfs, devs, nulldev)
 
 # R translation of grpnet_multinom.f90
 R_grpnet_multinom(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw,  

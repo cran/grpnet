@@ -54,7 +54,7 @@ Helwig, N. E. (2024). Versatile descent algorithms for group regularization and 
 Nathaniel E. Helwig <helwig@umn.edu>
 }
 \note{
-If \code{x} is a multinomial model, the coefficients for each response class are plotted in a separate plot.
+If \code{x} is a multigaussian or multinomial model, the coefficients for each response dimension/class are plotted in a separate plot.
 }
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~

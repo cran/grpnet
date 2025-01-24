@@ -5,8 +5,10 @@ grpnet.formula <-
   function(formula,
            data,
            use.rk = TRUE,
-           family = c("gaussian", "binomial", "multinomial", "poisson", 
-                      "negative.binomial", "Gamma", "inverse.gaussian"),
+           family = c("gaussian", "multigaussian", 
+                      "binomial", "multinomial", 
+                      "poisson", "negative.binomial", 
+                      "Gamma", "inverse.gaussian"),
            weights = NULL,
            offset = NULL,
            alpha = 1,
@@ -22,10 +24,11 @@ grpnet.formula <-
            thresh = 1e-04,
            maxit = 1e05,
            proglang = c("Fortran", "R"),
+           standardize.response = FALSE,
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-06-27
+    # Updated: 2025-01-17
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -126,7 +129,8 @@ grpnet.formula <-
                           intercept = intercept,
                           thresh = thresh,
                           maxit = maxit,
-                          proglang = proglang)
+                          proglang = proglang,
+                          standardize.response = standardize.response)
     
     
     ######***######   POST-PROCESSING   ######***######

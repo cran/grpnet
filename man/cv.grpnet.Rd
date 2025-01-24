@@ -192,6 +192,25 @@ plot(mod)
 
 
 
+######***######   family = "multigaussian"   ######***######
+
+# load data
+data(auto)
+
+# 10-fold cv (formula method, response = (mpg, displacement))
+y <- as.matrix(auto[,c(1,3)])
+set.seed(1)
+mod <- cv.grpnet(y ~ ., data = auto[,-c(1,3)], family = "multigaussian",
+                 standardize.response = TRUE)
+
+# print min and 1se solution info
+mod
+
+# plot cv error curve
+plot(mod)
+
+
+
 ######***######   family = "binomial"   ######***######
 
 # load data

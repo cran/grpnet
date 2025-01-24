@@ -2,12 +2,14 @@ family.grpnet <-
   function(object, theta = 1){
     # prepare family for grpnet
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-06-28
+    # Updated: 2025-01-17
     
     object <- as.character(object[1])
-    if(object == "gaussian"){
+    if(object %in% c("gaussian", "multigaussian")){
       
+      famname <- object
       object <- gaussian()
+      object$family <- famname
       
     } else if(object == "binomial"){
       

@@ -1,3 +1,38 @@
+Version 0.7   (2025-01-23)
+
+   1) Bug fix in cv.grpnet() for multinomial when adaptive = TRUE
+	* Previously produced an error when orthogonalized = TRUE
+	* Error was due to improper handling of listed terms
+	* Updated version can now handle orthogonalization
+
+   2) Bug fix in rk() when providing Boundary.knots
+	* Previously Boundary.knots were ignored if knots = NULL
+	* This could have been problematic for periodic data
+	* Now Boundary.knots are used regardless of knots input
+
+   3) Bug fix in convergence handling for all R versions of internals
+	* Previously proglang = "R" used different relative convergence
+	* This only affected initialization of unpenalized terms
+	* Now exact same convergence is used for Fortran and R code
+
+   4) Added "multigaussian" family
+	* Used for fitting multivariate gaussian responses models
+	* Simultaneous shrinking and selecting of multivariate responses
+	* Output is structured similar to that of the multinomial models
+
+   5) Improvements to basis used for nominal (categorical) predictors
+	* Previously used a version of dummy coding when use.rk = TRUE
+	* Problem: does not guarantee that the coefficients sum to zero
+	* Now uses a version of effect coding, ensuring coefs sum to zero
+
+   6) Other miscellaneous updates
+	* The used "proglang" is now returned by the grpnet() function
+	* Added the "standardize.response" argument to grpnet() function
+	* Improvements to intervals of coef, predict, plot, etc.
+
+
+
+
 Version 0.6   (2024-10-11)
 
    1) Bug fix in rk() function for situations when min(x) = max(x)

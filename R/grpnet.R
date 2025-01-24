@@ -45,7 +45,7 @@ plot.grpnet <-
     res <- predict(x, newx = newx, newdata = newdata, type = type)
     if(type == "imp"){
       colors <- col
-      if(x$family$family == "multinomial"){
+      if(x$family$family %in% c("multigaussian", "multinomial")){
         rnames <- rownames(res[[1]])
         cnames <- colnames(res[[1]])
         for(k in 1:length(res)){
@@ -85,7 +85,7 @@ plot.grpnet <-
       }
     } else {
       colors <- col[as.integer(as.factor(x$group))]
-      if(x$family$family == "multinomial"){
+      if(x$family$family %in% c("multigaussian", "multinomial")){
         index <- (1+int):nrow(res[[1]])
         for(j in 1:length(res)){
           plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
