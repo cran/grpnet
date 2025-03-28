@@ -36,7 +36,7 @@ static const R_FortranMethodDef FortranEntries[] = {
     {"grpnet_gamma",    (DL_FUNC) &F77_NAME(grpnet_gamma),    27},
     {"grpnet_gaussian", (DL_FUNC) &F77_NAME(grpnet_gaussian), 27},
     {"grpnet_invgaus", (DL_FUNC) &F77_NAME(grpnet_invgaus), 27},
-    {"grpnet_multigaus", (DL_FUNC) &F77_NAME(grpnet_multinom), 28},
+    {"grpnet_multigaus", (DL_FUNC) &F77_NAME(grpnet_multigaus), 28},
     {"grpnet_multinom", (DL_FUNC) &F77_NAME(grpnet_multinom), 28},
     {"grpnet_poisson",  (DL_FUNC) &F77_NAME(grpnet_poisson),  27},
     {"grpnet_negbin",  (DL_FUNC) &F77_NAME(grpnet_negbin),  28},

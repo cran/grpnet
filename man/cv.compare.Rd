@@ -86,7 +86,7 @@ When \code{plot = TRUE}, there is no return value (it produces a plot)
 When \code{plot = FALSE}, a data.frame is returned with the mean cv error (and se) for each solution
 }
 \references{
-Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
+Helwig, N. E. (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics, 34}(1), 239-252. \doi{10.1080/10618600.2024.2362232}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

@@ -1,3 +1,22 @@
+Version 0.8   (2025-03-27)
+
+   1) Bug fixes in cv.grpnet() for "multigaussian" family
+	* Fixed argument bug in cv.grpnet.default() with parallel computing
+	* Fixed offset dimensions (for cv.grpnet() with offset = NULL)
+
+   2) Bug fixes in grpnet() for "multigaussian" family
+	* "grpnet_init.c" contained a typo ---> incorrect memory allocation
+	* Fixed argument bug in grpnet.default() with proglang = “R”
+
+   3) Improvements to plot.grpnet() function for multivariate responses.
+	* Now plots response dimension names as title (instead of legend)
+	* Now uses unique (not common) y-axis limits for each dimension
+
+   4) Updated references for package and help files (Helwig, 2025).
+
+
+
+
 Version 0.7   (2025-01-23)
 
    1) Bug fix in cv.grpnet() for multinomial when adaptive = TRUE

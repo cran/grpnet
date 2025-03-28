@@ -36,7 +36,7 @@ List with components:
 \item{dev.resids }{function for computing deviance residuals}
 }
 \references{
-Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
+Helwig, N. E. (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics, 34}(1), 239-252. \doi{10.1080/10618600.2024.2362232}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

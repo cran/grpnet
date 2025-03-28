@@ -88,9 +88,10 @@ plot.grpnet <-
       if(x$family$family %in% c("multigaussian", "multinomial")){
         index <- (1+int):nrow(res[[1]])
         for(j in 1:length(res)){
-          plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
-               xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
-          legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
+          plot(log(x$lambda), res[[j]][1,], ylim = extendrange(res[[j]][index,]),
+               xlab = "Log Lambda", ylab = "Coefficients", t = "n", 
+               main = x$ylev[j], ...)
+          #legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
           for(k in index) {
             lines(log(x$lambda), res[[j]][k,], col = colors[k])
           }

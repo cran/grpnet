@@ -21,7 +21,7 @@ cv.grpnet.default <-
            ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-17
+    # Updated: 2025-03-26
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -165,6 +165,7 @@ cv.grpnet.default <-
     if(is.null(offset)){
       include.offset <- FALSE
       offset <- rep(0.0, nobs)
+      if(family == "multigaussian") offset <- matrix(offset, nrow = nobs, ncol = nresp)
       if(family == "multinomial") offset <- matrix(offset, nrow = nobs, ncol = nlev)
     } else {
       include.offset <- TRUE
@@ -466,11 +467,11 @@ cv.grpnet.default <-
       if(parallel){
         
         # define parcvloss function
-        parcvloss <-
+        parcvloss.multigaussian <-
           function(testid, xmat, ymat, group, family, weights, offset, alpha, 
                    nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
                    gamma, theta, standardized, orthogonalized, intercept, 
-                   thresh, maxit, proglang, type.measure, same.lambda, yfac, yrowsum){
+                   thresh, maxit, proglang, type.measure, same.lambda){
             temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
                            y = ymat[-testid,,drop=FALSE], 
                            group = group, 
@@ -511,7 +512,7 @@ cv.grpnet.default <-
           } # end parcvloss
         
         # evaluate cvloss in parallel
-        cvloss <- parallel::parSapply(cl = cluster, X = fid, FUN = parcvloss,
+        cvloss <- parallel::parSapply(cl = cluster, X = fid, FUN = parcvloss.multigaussian,
                                       xmat = x,
                                       ymat = y,
                                       group = group,
@@ -533,9 +534,7 @@ cv.grpnet.default <-
                                       maxit = grpnet.fit$args$maxit,
                                       proglang = grpnet.fit$args$proglang,
                                       type.measure = type.measure,
-                                      same.lambda = same.lambda,
-                                      yfac = yfac,
-                                      yrowsum = yrowsum)
+                                      same.lambda = same.lambda)
         
         # unvectorize
         cvloss <- matrix(cvloss, nrow = nlambda, ncol = nfolds)
@@ -612,7 +611,7 @@ cv.grpnet.default <-
       if(parallel){
         
         # define parcvloss function
-        parcvloss <-
+        parcvloss.multinomial <-
           function(testid, xmat, ymat, group, family, weights, offset, alpha, 
                    nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
                    gamma, theta, standardized, orthogonalized, intercept, 
@@ -663,7 +662,7 @@ cv.grpnet.default <-
           } # end parcvloss
         
         # evaluate cvloss in parallel
-        cvloss <- parallel::parSapply(cl = cluster, X = fid, FUN = parcvloss,
+        cvloss <- parallel::parSapply(cl = cluster, X = fid, FUN = parcvloss.multinomial,
                                       xmat = x,
                                       ymat = y,
                                       group = group,

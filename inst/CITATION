@@ -7,6 +7,9 @@ bibentry(
     title = "Versatile descent algorithms for group regularization and variable selection in generalized linear models",
     author = "Nathaniel E. Helwig",
     journal = "Journal of Computational and Graphical Statistics",
-    year = "2024",
+    year = "2025",
+    Number = "34",
+    Volume = "1",
+    Pages = "239-252",
     doi = "10.1080/10618600.2024.2362232",
-    textVersion = "Helwig NE (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. Journal of Computational and Graphical Statistics. https://doi.org/10.1080/10618600.2024.2362232" )
+    textVersion = "Helwig NE (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. Journal of Computational and Graphical Statistics, 34(1), 239-252. https://doi.org/10.1080/10618600.2024.2362232" )

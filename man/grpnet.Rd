@@ -7,7 +7,7 @@
 Fit a Group Elastic Net Regularized GLM/GAM
 }
 \description{
-Fits generalized linear/additive models with a group elastic net penalty using an adaptively bounded gradient descent (ABGD) algorithm (Helwig, 2024). Predictor groups can be manually input (default S3 method) or inferred from the model (S3 "formula" method). The regularization path is computed at a data-generated (default) or user-provided sequence of lambda values. }
+Fits generalized linear/additive models with a group elastic net penalty using an adaptively bounded gradient descent (ABGD) algorithm (Helwig, 2025). Predictor groups can be manually input (default S3 method) or inferred from the model (S3 "formula" method). The regularization path is computed at a data-generated (default) or user-provided sequence of lambda values. }
 \usage{
 grpnet(x, \dots)
 
@@ -68,7 +68,7 @@ grpnet(x, \dots)
 Model (design) matrix of dimension \code{nobs} by \code{nvars} (\eqn{n \times p}).
 }
   \item{y}{
-Response vector of length \eqn{n}. Matrix inputs are allowed for binomial and multinomial families (see "Binomial and multinomial" section).
+Response vector of length \eqn{n} or matrix of dimension \eqn{n \times m}. Note that matrix inputs are (i) required for multigaussian family, (ii) allowed for binomial and multinomial families (see "Binomial and multinomial" section in \code{\link{grpnet}}), and (iii) not permitted for other families.
 }
   \item{group}{
 Group label vector (factor, character, or integer) of length \eqn{p}. Predictors with the same label are grouped together for regularization.
@@ -209,7 +209,7 @@ An object of class \code{"grpnet"} with the following elements:
 \references{
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
 
-Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
+Helwig, N. E. (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics, 34}(1), 239-252. \doi{10.1080/10618600.2024.2362232}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>
@@ -248,7 +248,7 @@ For \code{"binomial"} responses, three different possibilities exist for the inp
 3. numeric vector with entries between 0 and 1 \cr
 In this case, the \code{weights} argument should be used specify the total number of trials.
 
-For \code{"multinomial"} responses, two different possibilities exist for the input reponse: \cr
+For \code{"multinomial"} responses, two different possibilities exist for the input response: \cr
 1. vector coercible into a factor with more than two levels \cr 
 2. matrix of integers (counts) for each category level \cr
 }

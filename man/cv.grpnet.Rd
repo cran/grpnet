@@ -54,7 +54,7 @@ cv.grpnet(x, \dots)
 Model (design) matrix of dimension \code{nobs} by \code{nvars} (\eqn{n \times p}).
 }
   \item{y}{
-Response vector of length \eqn{n}. Matrix inputs are allowed for binomial and multinomial families (see "Binomial and multinomial" section in \code{\link{grpnet}}).
+Response vector of length \eqn{n} or matrix of dimension \eqn{n \times m}. Note that matrix inputs are (i) required for multigaussian family, (ii) allowed for binomial and multinomial families (see "Binomial and multinomial" section in \code{\link{grpnet}}), and (iii) not permitted for other families.
 }
   \item{group}{
 Group label vector (factor, character, or integer) of length \eqn{p}. Predictors with the same label are grouped together for regularization.
@@ -81,7 +81,7 @@ Scalar or vector specifying the elastic net tuning parameter \eqn{\alpha}. If \c
 Scalar or vector specifying the penalty hyperparameter \eqn{\gamma} for MCP or SCAD. If \code{gamma} is a vector (default), then (a) the same \code{foldid} is used to compute the cross-validation error for each \eqn{\gamma}, and (b) the solution for the optimal \eqn{\gamma} is returned. 
 }   
   \item{type.measure}{
-Loss function for cross-validation. Options include: \code{"deviance"} for model deviance, \code{"mse"} for mean squared error, \code{"mae"} for mean absolute error, or \code{"class"} for classification error. Note that \code{"class"} is only available for binomial and multinomial families. The default is classification error (for binomial and multinomial) or deviance (others).
+Loss function for cross-validation. Options include: \code{"deviance"} for model deviance, \code{"mse"} for mean squared error, \code{"mae"} for mean absolute error, or \code{"class"} for classification error. Note that \code{"class"} is only available for binomial and multinomial families. The default is classification error (for binomial and multinomial) or mean absolute error (others).
 }
   \item{nfolds}{
 Number of folds for cross-validation. 
@@ -142,12 +142,12 @@ which is the classic definition of the standard error of the mean.
 \item{type.measure}{loss function for cross-validation (used for plot label)}
 \item{call}{matched call}
 \item{time}{runtime in seconds to perform k-fold CV tuning}
-\item{tune}{data frame containing the tuning results, i.e., min(cvm) for each combo of \code{alpha} and/or \code{gamma}}
+\item{tune}{data frame containing the tuning results, i.e., min(cvm) for each combination of \code{alpha} and/or \code{gamma}}
 }
 \references{
 Friedman, J.,  Hastie, T., & Tibshirani, R. (2010). Regularization paths for generalized linear models via coordinate descent. \emph{Journal of Statistical Software, 33}(1), 1-22. \doi{10.18637/jss.v033.i01}
 
-Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
+Helwig, N. E. (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics, 34}(1), 239-252. \doi{10.1080/10618600.2024.2362232}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

@@ -69,13 +69,13 @@ If \code{plot = TRUE}, then produces a plot.
 If \code{plot = FALSE}, then returns a data frame.
 }
 \references{
-Fan J, & Li, R. (2001). Variable selection via nonconcave penalized likelihood and its oracle properties. \emph{Journal of the American Statistical Association, 96}(456), 1348-1360. \doi{10.1198/016214501753382273}
+Fan, J., & Li, R. (2001). Variable selection via nonconcave penalized likelihood and its oracle properties. \emph{Journal of the American Statistical Association, 96}(456), 1348-1360. \doi{10.1198/016214501753382273}
 
-Helwig, N. E. (2024). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics}. \doi{10.1080/10618600.2024.2362232}
+Helwig, N. E. (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics, 34}(1), 239-252. \doi{10.1080/10618600.2024.2362232}
 
 Tibshirani, R. (1996). Regression and shrinkage via the Lasso. \emph{Journal of the Royal Statistical Society, Series B, 58}, 267-288. \doi{10.1111/j.2517-6161.1996.tb02080.x}
 
-Zhang CH (2010). Nearly unbiased variable selection under minimax concave penalty. \emph{The Annals of Statistics, 38}(2), 894-942. \doi{10.1214/09-AOS729}
+Zhang, C. H. (2010). Nearly unbiased variable selection under minimax concave penalty. \emph{The Annals of Statistics, 38}(2), 894-942. \doi{10.1214/09-AOS729}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

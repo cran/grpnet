@@ -40,7 +40,7 @@ Helwig, N. E. (2017). Regression with ordered predictors via ordinal smoothing s
 
 Helwig, N. E. (2021). Spectrally sparse nonparametric regression via elastic net regularized smoothers. Journal of Computational and Graphical Statistics, 30(1), 182-191. \doi{10.1080/10618600.2020.1806855}
 
-Helwig, N. E. (2024). Precise tensor product smoothing via spectral splines. Stats, 7(1), 34-53. \doi{10.3390/stats7010003}
+Helwig, N. E. (2025). Versatile descent algorithms for group regularization and variable selection in generalized linear models. \emph{Journal of Computational and Graphical Statistics, 34}(1), 239-252. \doi{10.1080/10618600.2024.2362232}
 }
 \author{
 Nathaniel E. Helwig <helwig@umn.edu>

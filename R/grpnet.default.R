@@ -29,7 +29,7 @@ grpnet.default <-
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-17
+    # Updated: 2025-03-25
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -421,7 +421,7 @@ grpnet.default <-
       } else {
         res <- R_grpnet_multigaus(nobs = nobs,
                                   nvars = nvars,
-                                  nresp = nlev,
+                                  nresp = nresp,
                                   x = x,
                                   y = y,
                                   w = weights,
