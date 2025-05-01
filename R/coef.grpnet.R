@@ -7,7 +7,7 @@ coef.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-17
+    # Updated: 2025-04-23
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -46,7 +46,7 @@ coef.grpnet <-
         for(k in 1:nresp){
           if(nlam == 1L){
             coefs[[k]] <- matrix(c(object$a0[k], object$beta[[k]]), ncol = 1)
-            rownames(coefs[[k]]) <- c("(Intercept)", names(object$beta[[k]]))
+            rownames(coefs[[k]]) <- c("(Intercept)", rownames(object$beta[[k]]))
             colnames(coefs[[k]]) <- "s1"
           } else {
             coefs[[k]] <- rbind(object$a0[k,], object$beta[[k]])

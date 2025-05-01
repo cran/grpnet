@@ -3,6 +3,7 @@
 \alias{R_grpnet_binomial}
 \alias{R_grpnet_gamma}
 \alias{R_grpnet_gaussian}
+\alias{R_grpnet_hsvm}
 \alias{R_grpnet_invgaus}
 \alias{R_grpnet_multigaus}
 \alias{R_grpnet_multinom}
@@ -11,6 +12,7 @@
 
 \alias{R_grpnet_binomial_dev}
 \alias{R_grpnet_gamma_dev}
+\alias{R_grpnet_hsvm_dev}
 \alias{R_grpnet_invgaus_dev}
 \alias{R_grpnet_multinom_dev}
 \alias{R_grpnet_negbin_dev}
@@ -43,7 +45,13 @@ R_grpnet_gamma(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha,
 R_grpnet_gaussian(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, 
                   nlam, lambda, lmr, penid, gamma, eps, maxit,
                   standardize, intercept, ibeta, betas, iters,
-                  nzgrps, nzcoef, edfs, devs, nulldev)             
+                  nzgrps, nzcoef, edfs, devs, nulldev)
+                  
+# R translation of grpnet_hvsm.f90
+R_grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, 
+              nlam, lambda, lmr, penid, gamma, eps, maxit,
+              standardize, intercept, ibeta, betas, iters,
+              nzgrps, nzcoef, edfs, devs, nulldev, theta)
 
 # R translation of grpnet_invgaus.f90
 R_grpnet_invgaus(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, 

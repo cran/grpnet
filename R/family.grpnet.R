@@ -2,7 +2,7 @@ family.grpnet <-
   function(object, theta = 1){
     # prepare family for grpnet
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-17
+    # Updated: 2025-04-22
     
     object <- as.character(object[1])
     if(object %in% c("gaussian", "multigaussian")){
@@ -10,6 +10,26 @@ family.grpnet <-
       famname <- object
       object <- gaussian()
       object$family <- famname
+      
+    } else if(object == "hsvm"){
+      
+      theta <- as.numeric(theta[1])
+      if(theta <= 0) stop("Input 'theta' must be positive")
+      .Theta <- theta
+      env <- new.env(parent = .GlobalEnv)
+      assign(".Theta", theta, envir = env)
+      dr <- function(y, mu, wt){
+        muy <- mu * y
+        vec <- rep(0.0, length(muy))
+        idx <- which(muy > 1.0 - .Theta)
+        vec[idx] <- (1.0 - muy[idx])^2 / (2.0 * .Theta)
+        vec[!idx] <- 1.0 - muy[!idx] - .Theta / 2.0
+        vec[which(muy > 1.0)] <- 0.0
+        sum(2 * wt * vec)
+      }
+      object <- list(family = "hsvm",
+                     linkinv = function(eta) eta,
+                     dev.resids = dr)
       
     } else if(object == "binomial"){
       

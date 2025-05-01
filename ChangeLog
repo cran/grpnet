@@ -1,3 +1,23 @@
+Version 0.9   (2025-05-01)
+
+   1) Bug fixes in coef.grpnet()
+	* Line 49 caused an error due to using names() instead of rownames()
+	* Fixed code uses rownames() to correctly pull multivariate coef names
+	* Thanks to Kyra Wilson at University of Washington for finding the bug
+
+   2) Added family = "hsvm" (Huberized support vector machine)
+	* Implements the quadratically smoothed hinge loss function
+	* Designed for binary classification problems:  y %in% c(-1, 1)
+	* Additional argument "theta" controls smoothing rate
+
+   3) plot.grpnet: additions and changes to default
+	* New option of "dev.ratio" to plot log(lambda) vs dev.ratio
+	* This is the new default type for grpnet's S3 plotting method
+	* To get the old default:  plot(mod, type = "coef")
+
+
+
+
 Version 0.8   (2025-03-27)
 
    1) Bug fixes in cv.grpnet() for "multigaussian" family

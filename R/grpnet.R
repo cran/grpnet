@@ -22,11 +22,11 @@ print.grpnet <-
   } # end print.grpnet
 
 plot.grpnet <-
-  function(x, type = c("coef", "imp", "norm", "znorm"), 
+  function(x, type = c("dev.ratio", "coef", "imp", "norm", "znorm"), 
            newx, newdata, intercept = FALSE,
            color.by.group = TRUE, col = NULL, ...){
     int <- ifelse(x$args$intercept && !intercept, 1, 0)
-    types <- c("coef", "imp", "norm", "znorm")
+    types <- c("dev.ratio", "coef", "imp", "norm", "znorm")
     type <- pmatch(type[1], types)
     if(is.na(type)) stop("Invalid 'type' input")
     type <- types[type]
@@ -42,68 +42,73 @@ plot.grpnet <-
     if(type == "imp" && missing(newx) && missing(newdata)){
       stop("When type = 'imp', you need to provide either 'newx' or 'newdata'.")
     }
-    res <- predict(x, newx = newx, newdata = newdata, type = type)
-    if(type == "imp"){
-      colors <- col
-      if(x$family$family %in% c("multigaussian", "multinomial")){
-        rnames <- rownames(res[[1]])
-        cnames <- colnames(res[[1]])
-        for(k in 1:length(res)){
-          res[[k]] <- rbind(0, res[[k]])
-          rownames(res[[k]]) <- c("(Intercept)", rnames)
-          colnames(res[[k]]) <- cnames
-        }
-        index <- (1+int):nrow(res[[1]])
-        for(j in 1:length(res)){
-          plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
-               xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
-          legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
-          for(k in index) {
-            lines(log(x$lambda), res[[j]][k,], col = colors[k])
-          }
-        }
-      } else {
-        rnames <- rownames(res)
-        cnames <- colnames(res)
-        res <- rbind(0, res)
-        rownames(res) <- c("(Intercept)", rnames)
-        colnames(res) <- cnames
-        index <- (1+int):nrow(res)
-        plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
-             xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
-        for(k in index) {
-          lines(log(x$lambda), res[k,], col = colors[k])
-        }
-      }
-    } else if(type %in% c("norm", "znorm")){
-      colors <- col
-      index <- (1+int):nrow(res)
-      plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
-           xlab = "Log Lambda", ylab = "L2 Norm", t = "n", ...)
-      for(k in index) {
-        lines(log(x$lambda), res[k,], col = colors[k])
-      }
+    if(type == "dev.ratio"){
+      plot(log(x$lambda), x$dev.ratio,
+           xlab = "Log Lambda", ylab = "Explained Deviance", ...)
     } else {
-      colors <- col[as.integer(as.factor(x$group))]
-      if(x$family$family %in% c("multigaussian", "multinomial")){
-        index <- (1+int):nrow(res[[1]])
-        for(j in 1:length(res)){
-          plot(log(x$lambda), res[[j]][1,], ylim = extendrange(res[[j]][index,]),
-               xlab = "Log Lambda", ylab = "Coefficients", t = "n", 
-               main = x$ylev[j], ...)
-          #legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
+      res <- predict(x, newx = newx, newdata = newdata, type = type)
+      if(type == "imp"){
+        colors <- col
+        if(x$family$family %in% c("multigaussian", "multinomial")){
+          rnames <- rownames(res[[1]])
+          cnames <- colnames(res[[1]])
+          for(k in 1:length(res)){
+            res[[k]] <- rbind(0, res[[k]])
+            rownames(res[[k]]) <- c("(Intercept)", rnames)
+            colnames(res[[k]]) <- cnames
+          }
+          index <- (1+int):nrow(res[[1]])
+          for(j in 1:length(res)){
+            plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
+                 xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
+            legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
+            for(k in index) {
+              lines(log(x$lambda), res[[j]][k,], col = colors[k])
+            }
+          }
+        } else {
+          rnames <- rownames(res)
+          cnames <- colnames(res)
+          res <- rbind(0, res)
+          rownames(res) <- c("(Intercept)", rnames)
+          colnames(res) <- cnames
+          index <- (1+int):nrow(res)
+          plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
+               xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
           for(k in index) {
-            lines(log(x$lambda), res[[j]][k,], col = colors[k])
+            lines(log(x$lambda), res[k,], col = colors[k])
           }
         }
-      } else {
+      } else if(type %in% c("norm", "znorm")){
+        colors <- col
         index <- (1+int):nrow(res)
         plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
-             xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
+             xlab = "Log Lambda", ylab = "L2 Norm", t = "n", ...)
         for(k in index) {
           lines(log(x$lambda), res[k,], col = colors[k])
         }
+      } else {
+        colors <- col[as.integer(as.factor(x$group))]
+        if(x$family$family %in% c("multigaussian", "multinomial")){
+          index <- (1+int):nrow(res[[1]])
+          for(j in 1:length(res)){
+            plot(log(x$lambda), res[[j]][1,], ylim = extendrange(res[[j]][index,]),
+                 xlab = "Log Lambda", ylab = "Coefficients", t = "n", 
+                 main = x$ylev[j], ...)
+            #legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
+            for(k in index) {
+              lines(log(x$lambda), res[[j]][k,], col = colors[k])
+            }
+          }
+        } else {
+          index <- (1+int):nrow(res)
+          plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
+               xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
+          for(k in index) {
+            lines(log(x$lambda), res[k,], col = colors[k])
+          }
+        }
       }
-    }
     abline(h = 0)
+    }
   } # end plot.grpnet

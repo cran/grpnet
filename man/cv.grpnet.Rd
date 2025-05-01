@@ -211,6 +211,26 @@ plot(mod)
 
 
 
+######***######   family = "hsvm"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# 10-fold cv (default method, response = origin with 2 levels)
+set.seed(1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "hsvm")
+
+# print min and 1se solution info
+mod
+
+# plot cv error curve
+plot(mod)
+
+
+
 ######***######   family = "binomial"   ######***######
 
 # load data

@@ -6,7 +6,7 @@ grpnet.default <-
            y,
            group,
            family = c("gaussian", "multigaussian", 
-                      "binomial", "multinomial", 
+                      "hsvm", "binomial", "multinomial",
                       "poisson", "negative.binomial", 
                       "Gamma", "inverse.gaussian"),
            weights = NULL,
@@ -29,7 +29,7 @@ grpnet.default <-
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-03-25
+    # Updated: 2025-04-22
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -71,7 +71,7 @@ grpnet.default <-
     ### check family
     family <- as.character(family[1])
     if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
-    families <- c("gaussian", "multigaussian", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+    families <- c("gaussian", "multigaussian", "hsvm", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
     family <- pmatch(family, families)
     if(is.na(family)) stop("'family' not recognized")
     family <- families[family]
@@ -107,6 +107,22 @@ grpnet.default <-
         y <- as.numeric(y)
         family <- gaussian()
       }
+    } else if(family$family == "hsvm"){
+      if(is.character(y)) y <- as.factor(y)
+      if(is.factor(y)){
+        ylev <- levels(y)
+        y <- ifelse(y == ylev[1], -1.0, 1.0)
+      } else if(is.matrix(y)) {
+        if(ncol(y) != 2L | any(y < 0)) stop("Input 'y' must be a matrix (# success, # failure) when family = 'hsvm'")
+        ytotal <- rowSums(y)
+        weights <- weights * ytotal
+        wsqrt <- sqrt(weights)
+        y <- 2 * (y[,1] / ytotal) - 1
+      } else {
+        y <- as.numeric(y)
+        if(any(y < -1) | any(y > 1)) stop("Input 'y' must contain values between -1 and 1 when family = 'hsvm'" )
+      }
+      if(is.null(ylev)) ylev <- c(-1, 1)
     } else if(family$family == "binomial"){
       if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
@@ -460,6 +476,73 @@ grpnet.default <-
         colnames(betas[[j]]) <- paste0("s", 1:nlambda)
       }
       res$betas <- betas
+      
+    } else if(family$family == "hsvm"){
+      
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        
+        res <- .Fortran("grpnet_hsvm",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0,
+                        theta = theta)
+        
+      } else {
+        
+        res <- testR <- R_grpnet_hsvm(nobs = nobs,
+                                      nvars = nvars,
+                                      x = x,
+                                      y = y,
+                                      w = weights,
+                                      off = offset,
+                                      ngrps = ngrps,
+                                      gsize = gsize, 
+                                      pw = penalty.factor,
+                                      alpha = alpha,
+                                      nlam = nlambda,
+                                      lambda = lambda,
+                                      lmr = lambda.min.ratio, 
+                                      penid = penalty,
+                                      gamma = gamma,
+                                      eps = thresh,
+                                      maxit = maxit,
+                                      standardize = as.integer(standardized),
+                                      intercept = as.integer(intercept),
+                                      ibeta = rep(0.0, nlambda),
+                                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                                      iters = rep(0L, nlambda),
+                                      nzgrps = rep(0L, nlambda),
+                                      nzcoef = rep(0L, nlambda),
+                                      edfs = rep(0.0, nlambda),
+                                      devs = rep(0.0, nlambda),
+                                      nulldev = 0.0,
+                                      theta = theta)
+      } # end if(proglang == "Fortran")
       
     } else if(family$family == "binomial"){
       

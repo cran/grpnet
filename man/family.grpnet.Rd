@@ -13,15 +13,20 @@ family.grpnet(object, theta = 1)
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{object}{
-one of the following characters specifying the exponential family: \code{"gaussian"}, \code{"multigaussian"}, \code{"binomial"}, \code{"multinomial"}, \code{"poisson"}, \code{"negative.binomial"}, \code{"Gamma"}, \code{"inverse.gaussian"}}
+one of the following characters specifying the exponential family: \code{"gaussian"}, \code{"multigaussian"}, \code{"hsvm"}, \code{"binomial"}, \code{"multinomial"}, \code{"poisson"}, \code{"negative.binomial"}, \code{"Gamma"}, \code{"inverse.gaussian"}}
 \item{theta}{
-Additional ("size") parameter for negative binomial responses, where the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
+positive scalar that serves as an additional hyperparameter for various loss functions.
+
+hsvm: additional parameter that controls the smoothing rate for the hinge loss function (see Note below).
+
+negative.binomial: size parameter such that the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
 }
 }
 \details{
 There is only one available link function for each \code{family}: \cr
 * gaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
 * multigaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
+* hsvm (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
 * binomial (logit): \eqn{\log(\frac{\pi}{1 - \pi}) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * multinomial (symmetric): \eqn{\pi_\ell = \frac{\exp(\mathbf{X}^\top \boldsymbol\beta_\ell)}{\sum_{l = 1}^m \exp(\mathbf{X}^\top \boldsymbol\beta_l)}} \cr
 * poisson (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
@@ -43,6 +48,16 @@ Nathaniel E. Helwig <helwig@umn.edu>
 }
 \note{
 For \code{gaussian} family, this returns the full output produced by \code{\link[stats]{gaussian}}.
+
+For \code{hvsm} family, the quadratically smoothed hinge loss is defined as
+\deqn{
+\mathrm{hsvm}(z) = \left\{ \begin{array}{ll}
+0 & z > 1 \\
+(1 - z)^2 / (2 \theta) & 1 - \theta < z \leq 1 \\
+1 - z - \theta / 2 & z \leq 1 - \theta \\
+\end{array} \right.
+}
+where \eqn{z = Y \eta} with \eqn{Y \in \{-1,1\}} denoting the response and \eqn{\eta = \mathbf{X}^\top \boldsymbol\beta} denoting the linear predictor. Note that the \code{hsvm} loss function approaches the support vector machine (i.e., hinge) loss function as \eqn{\theta \rightarrow 0}.
 }
 
 %% ~Make other sections like Warning with \section{Warning }{....} ~
@@ -56,6 +71,8 @@ For \code{gaussian} family, this returns the full output produced by \code{\link
 family.grpnet("gaussian")
 
 family.grpnet("multigaussian")
+
+family.grpnet("hsvm")
 
 family.grpnet("binomial")
 

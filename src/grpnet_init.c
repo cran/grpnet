@@ -17,6 +17,7 @@
 extern void F77_NAME(grpnet_binomial)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_gamma)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_gaussian)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_hsvm)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_invgaus)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_multigaus)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_multinom)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
@@ -35,6 +36,7 @@ static const R_FortranMethodDef FortranEntries[] = {
     {"grpnet_binomial", (DL_FUNC) &F77_NAME(grpnet_binomial), 27},
     {"grpnet_gamma",    (DL_FUNC) &F77_NAME(grpnet_gamma),    27},
     {"grpnet_gaussian", (DL_FUNC) &F77_NAME(grpnet_gaussian), 27},
+    {"grpnet_hsvm", (DL_FUNC) &F77_NAME(grpnet_hsvm), 28},
     {"grpnet_invgaus", (DL_FUNC) &F77_NAME(grpnet_invgaus), 27},
     {"grpnet_multigaus", (DL_FUNC) &F77_NAME(grpnet_multigaus), 28},
     {"grpnet_multinom", (DL_FUNC) &F77_NAME(grpnet_multinom), 28},

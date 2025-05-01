@@ -26,7 +26,7 @@ predict.grpnet <-
     type <- pmatch(as.character(type[1]), thetypes)
     if(is.na(type)) stop("Invalid 'type' input")
     type <- thetypes[type]
-    if(type == "class" && !(family %in% c("binomial", "multinomial")))
+    if(type == "class" && !(family %in% c("hsvm", "binomial", "multinomial")))
       stop("Input 'type' can only be set to 'class' for binomial and multinomial families")
     
     
@@ -413,8 +413,8 @@ predict.grpnet <-
       if(type == "response") {
         fit <- object$family$linkinv(fit)
       } else if(type == "class"){ 
-        # note: family == "binomial" is implied
-        fit <- ifelse(object$family$linkinv(fit) <= 0.5, object$ylev[1], object$ylev[2])
+        thresh <- ifelse(family == "hsvm", 0.0, 0.5)   # else: binomial implied
+        fit <- ifelse(object$family$linkinv(fit) <= thresh, object$ylev[1], object$ylev[2])
       }
       return(drop(fit))
     }
@@ -425,8 +425,8 @@ predict.grpnet <-
       if(type == "response") {
         fit <- object$family$linkinv(fit)
       } else if(type == "class"){
-        # note: family == "binomial" is implied
-        fit <- ifelse(object$family$linkinv(fit) <= 0.5, object$ylev[1], object$ylev[2])
+        thresh <- ifelse(family == "hsvm", 0.0, 0.5)   # else: binomial implied
+        fit <- ifelse(object$family$linkinv(fit) <= thresh, object$ylev[1], object$ylev[2])
       }
       return(drop(matrix(fit, nrow = nrow(newx), ncol = ns)))
     }
@@ -465,8 +465,8 @@ predict.grpnet <-
     if(type == "response") {
       fit <- object$family$linkinv(fit)
     } else if(type == "class"){
-      # note: family == "binomial" is implied
-      fit <- ifelse(object$family$linkinv(fit) <= 0.5, object$ylev[1], object$ylev[2])
+      thresh <- ifelse(family == "hsvm", 0.0, 0.5)   # else: binomial implied
+      fit <- ifelse(object$family$linkinv(fit) <= thresh, object$ylev[1], object$ylev[2])
     }
     return(drop(fit))
     
