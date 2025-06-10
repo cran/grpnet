@@ -12,7 +12,7 @@ visualize.penalty <-
            ...){
     # plot grpnet penalties
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2024-06-04
+    # 2025-06-03
            
     
     
@@ -134,12 +134,12 @@ visualize.penalty <-
     if(is.null(args$col)) args$col <- c("black", "blue", "red")
     
     # check args$xlab
-    if(is.null(args$xlab)) args$xlab <- expression(theta)
+    if(is.null(args$xlab)) args$xlab <- expression(beta)
     
     # check args$ylab
     if(is.null(args$ylab)) args$ylab <- ifelse(derivative,
-                                               expression(italic(P)*"'" * (theta)),
-                                               expression(italic(P)(theta)))
+                                               expression(italic(P)*"'" * (beta)),
+                                               expression(italic(P)(beta)))
     # check args$main
     if(is.null(args$main)) args$main <- ifelse(derivative, "penalty derivatives", "penalty functions")
     

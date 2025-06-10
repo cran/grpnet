@@ -1,8 +1,8 @@
-!   grpnet_hsvm.f90 - group elastic net (Huberized support vector machine)
+!   grpnet_logit.f90 - group elastic net (logit)
 !   Nathaniel E. Helwig (helwig@umn.edu)
 !   Department of Psychology and School of Statistics
 !   University of Minnesota
-!   Date: 2025-04-24
+!   Date: 2025-05-29
 
 
 ! INPUTS/OUTPUTS
@@ -27,7 +27,7 @@
 !   lmr = lambda minimum ratio (lambda.min = lmr * lambda.max)
 !         note: unless lambda is provided, lambda.max is data dependent
 !   penid = penalty id: 1 = lasso, 2 = mcp, 3 = scad
-!   gamma = additional hyper-parameter for mcd and scad penalties
+!   gamma = additional hyper-parameter for mcd and scad penalities
 !           note: gamma > 1 for mcp and gamma > 2 for scad
 !   eps = convergence tolerance
 !   maxit = maximum number of iterations
@@ -41,13 +41,12 @@
 !   edfs = effective degrees of freedom for each lambda (nlam)
 !   devs = residual deviance for each lambda (nlam)
 !   nulldev = null deviance
-!   theta = additional parameter:  controls smoothing rate for loss (>0)
 
 
-SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
-                       nlam, lambda, lmr, penid, gamma, eps, maxit, &
-                       standardize, intercept, ibeta, betas, iters, &
-                       nzgrps, nzcoef, edfs, devs, nulldev, theta)
+SUBROUTINE grpnet_logit(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
+                        nlam, lambda, lmr, penid, gamma, eps, maxit, &
+                        standardize, intercept, ibeta, betas, iters, &
+                        nzgrps, nzcoef, edfs, devs, nulldev)
 
     IMPLICIT NONE
 
@@ -56,18 +55,18 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     INTEGER standardize, intercept, iters(nlam), nzgrps(nlam), nzcoef(nlam)
     DOUBLE PRECISION x(nobs, nvars), y(nobs), w(nobs), off(nobs), pw(ngrps)
     DOUBLE PRECISION alpha, lambda(nlam), lmr, gamma, eps, ibeta(nlam)
-    DOUBLE PRECISION betas(nvars, nlam), edfs(nlam), devs(nlam), nulldev, theta
+    DOUBLE PRECISION betas(nvars, nlam), edfs(nlam), devs(nlam), nulldev
 ! --------------- ARGUMENTS --------------- !
 
 
 ! --------------- LOCAL DEFINITIONS --------------- !
-    INTEGER i, j, k, l, iter, violations, makelambda, u
+    INTEGER i, j, k, l, iter, violations, makelambda, weighted
     INTEGER active(ngrps), strong(ngrps), ia(ngrps), ib(ngrps), gid
     DOUBLE PRECISION wmin, wmax, rnglam, minlam, maxlam, maxdif, macheps
     DOUBLE PRECISION r(nobs), difbeta(nvars), beta(nvars), difibeta
-    DOUBLE PRECISION zvec(nvars), grad(nvars), gradnorm(ngrps), ctol, shrink
-    DOUBLE PRECISION twolam, penone, pentwo, xmean(nvars), xsdev(ngrps)
-    DOUBLE PRECISION xev(ngrps), znorm, bnorm, yo(nobs), ry(nobs), gr(nobs)
+    DOUBLE PRECISION zvec(nvars), grad(nvars), gradnorm(ngrps)
+    DOUBLE PRECISION ctol, shrink, twolam, penone, pentwo, xmean(nvars)
+    DOUBLE PRECISION xsdev(ngrps), xev(ngrps), znorm, bnorm, eta(nobs)
     DOUBLE PRECISION, ALLOCATABLE :: xtx(:,:)
 ! --------------- LOCAL DEFINITIONS --------------- !
 
@@ -81,20 +80,18 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     wmin = MINVAL(w)
     wmax = MAXVAL(w)
     IF (wmax > wmin) THEN
+        weighted = 1
         w = nobs * w / SUM(w)     ! normalize so SUM(w) = nobs
         w = SQRT(w)
-        yo = y / w
-        y = w * y
-        off = w * off
         DO i=1,nobs
             x(i,:) = w(i) * x(i,:)
         END DO
     ELSE
+        weighted = 0
         w = 1.0D0
-        yo = y
     END IF
 ! --------------- CHECK WEIGHTS --------------- !
-    
+
 
 ! --------------- GROUP INDICES --------------- !
     gid = 0
@@ -138,7 +135,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
             DEALLOCATE(xtx)
         END IF
     END DO
-    xev = xev * (2.0D0 / theta)
+    xev = xev / 4.0D0
 ! --------------- GET MAX EIGENVALUE --------------- !
 
 
@@ -157,16 +154,8 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     gradnorm = 0.0D0
     twolam = 0.0D0
     devs = 0.0D0
-    r = y - off
-    ry = r * yo
-    DO u=1,nobs
-        IF (ry(u) < theta) THEN
-            gr(u) = MAX(0.0D0, ry(u)) * (y(u) / theta)
-        ELSE
-            gr(u) = y(u)
-        END IF
-    END DO 
-    
+    eta = off / w
+    r = w * y / (1.0D0 + EXP(eta * y))
 ! --------------- MISCELLANEOUS INITIALIZATIONS --------------- !
 
 
@@ -174,19 +163,20 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     IF (maxlam <= macheps) THEN
 
         makelambda = 1
+        i = 1
 
         ! find unpenalized groups !
         DO k=1,ngrps
             IF (pw(k) <= macheps) THEN
                 active(k) = 1
-                nzgrps(1) = nzgrps(1) + 1
-                nzcoef(1) = nzcoef(1) + gsize(k)
+                nzgrps(i) = nzgrps(i) + 1
+                nzcoef(i) = nzcoef(i) + gsize(k)
             END IF
         END DO
         ! find unpenalized groups !
 
         ! iterate until active coefficients converge !
-        IF (nzgrps(1) > 0) THEN
+        IF (nzgrps(i) > 0) THEN
             DO WHILE(iter < maxit)
 
                 ! update iter and reset counters
@@ -196,37 +186,23 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                 ! update active groups
                 DO k=1,ngrps
                     IF(active(k) == 0) CYCLE
-                    grad(ia(k):ib(k)) = MATMUL(gr, x(:,ia(k):ib(k))) / nobs
+                    grad(ia(k):ib(k)) = MATMUL(r, x(:,ia(k):ib(k))) / nobs
                     zvec(ia(k):ib(k)) = beta(ia(k):ib(k)) + grad(ia(k):ib(k)) / xev(k)
                     difbeta(ia(k):ib(k)) = zvec(ia(k):ib(k)) - beta(ia(k):ib(k))
                     maxdif = MAXVAL( ABS(difbeta(ia(k):ib(k))) / (1.0D0 + ABS(beta(ia(k):ib(k)))) )
                     beta(ia(k):ib(k)) = beta(ia(k):ib(k)) + difbeta(ia(k):ib(k))
-                    r = r - MATMUL(x(:,ia(k):ib(k)), difbeta(ia(k):ib(k)))
-                    ry = r * yo
-                    DO u=1,nobs
-                        IF (ry(u) < theta) THEN
-                            gr(u) = MAX(0.0D0, ry(u)) * (y(u) / theta)
-                        ELSE
-                            gr(u) = y(u)
-                        END IF
-                    END DO
+                    eta = eta + MATMUL(x(:,ia(k):ib(k)), difbeta(ia(k):ib(k))) / w
+                    r = w * y / (1.0D0 + EXP(eta * y))
                     ctol = MAX(maxdif , ctol)
                 END DO ! k=1,ngrps
 
                 ! update intercept
                 IF (intercept == 1) THEN
-                    difibeta = (SUM(gr * w) / nobs) * (theta / 2.0D0)
-                    maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(1)))
-                    ibeta(1) = ibeta(1) + difibeta
-                    r = r - w * difibeta
-                    ry = r * yo
-                    DO u=1,nobs
-                        IF (ry(u) < theta) THEN
-                            gr(u) = MAX(0.0D0, ry(u)) * (y(u) / theta)
-                        ELSE
-                            gr(u) = y(u)
-                        END IF
-                    END DO
+                    difibeta = ( SUM(r * w) / nobs ) * 4.0D0
+                    maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(i)))
+                    ibeta(i) = ibeta(i) + difibeta
+                    eta = eta + difibeta
+                    r = w * y / (1.0D0 + EXP(eta * y))
                     ctol = MAX(maxdif, ctol)
                 END IF ! (intercept == 1)
 
@@ -237,33 +213,13 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
 
         ELSE
 
-            DO WHILE(iter < maxit)
-
-                ! update iter and reset counters
-                ctol = 0.0D0
-                iter = iter + 1
-
-                ! intercept only
-                IF (intercept == 1) THEN
-                    difibeta = (SUM(gr * w) / nobs) * (theta / 2.0D0)
-                    maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(1)))
-                    ibeta(1) = ibeta(1) + difibeta
-                    r = r - w * difibeta
-                    ry = r * yo
-                    DO u=1,nobs
-                        IF (ry(u) < theta) THEN
-                            gr(u) = MAX(0.0D0, ry(u)) * (y(u) / theta)
-                        ELSE
-                            gr(u) = y(u)
-                        END IF
-                    END DO
-                    ctol = MAX(maxdif, ctol)
-                END IF
-
-                ! convergence check
-                IF(ctol < eps) EXIT
-
-            END DO ! WHILE(iter < maxit)
+            ! intercept only
+            iter = 1
+            IF (intercept == 1) THEN
+                ibeta(i) = LOG(SUM((1.0D0 + y) * w**2) / SUM((1.0D0 - y) * w**2))
+                eta = eta + ibeta(i)
+                r = w * y / (1.0D0 + EXP(eta * y))
+            END IF
 
         END IF ! (nzgrps(1) > 0)
         ! iterate until active coefficients converge !
@@ -271,7 +227,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
         ! create lambda sequence !
         DO k=1,ngrps
             IF (pw(k) > macheps) THEN
-                grad(ia(k):ib(k)) = MATMUL(gr, x(:,ia(k):ib(k))) / nobs
+                grad(ia(k):ib(k)) = MATMUL(r, x(:,ia(k):ib(k))) / nobs
                 gradnorm(k) = SQRT(SUM(grad(ia(k):ib(k))**2)) / pw(k)
             END IF
         END DO
@@ -282,7 +238,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
             makelambda = 0
         END IF
         minlam = lmr * maxlam
-        lambda(1) = maxlam
+        lambda(i) = maxlam
         maxlam = LOG(maxlam)
         minlam = LOG(minlam)
         rnglam = maxlam - minlam
@@ -292,15 +248,15 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
         ! create lambda sequence !
 
         ! calculate deviance !
-        CALL grpnet_hsvm_dev(nobs, y, r, w**2, theta, devs(1))
+        CALL grpnet_logit_dev(nobs, y, eta, w**2, devs(i))
         ! calculate deviance !
 
         ! save results !
-        betas(:,1) = beta
-        iters(1) = iter
-        nzgrps(1) = nzgrps(1) + intercept
-        nzcoef(1) = nzcoef(1) + intercept
-        edfs(1) = DBLE(nzcoef(1))
+        betas(:,i) = beta
+        iters(i) = iter
+        nzgrps(i) = nzgrps(i) + intercept
+        nzcoef(i) = nzcoef(i) + intercept
+        edfs(i) = DBLE(nzcoef(i))
         ! save results !
 
     END IF
@@ -317,7 +273,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
             beta = betas(:,i-1)
             twolam = alpha * (2.0D0 * lambda(i) - lambda(i-1))
         ELSE
-            grad = MATMUL(gr, x) / nobs
+            grad = MATMUL(r, x) / nobs
         END IF
         ! initializations !
 
@@ -348,52 +304,78 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                     edfs(i) = 0.0D0
                     ctol = 0.0D0
 
-                    ! update active groups
-                    DO k=1,ngrps
-                        IF(active(k) == 0) CYCLE
-                        penone = alpha * lambda(i) * pw(k) / xev(k)
-                        pentwo = (1.0D0 - alpha) * lambda(i) * pw(k) / xev(k)
-                        grad(ia(k):ib(k)) = MATMUL(gr, x(:,ia(k):ib(k))) / nobs
-                        zvec(ia(k):ib(k)) = beta(ia(k):ib(k)) + grad(ia(k):ib(k)) / xev(k)
-                        znorm = SQRT(SUM(zvec(ia(k):ib(k))**2))
-                        bnorm = SQRT(SUM(beta(ia(k):ib(k))**2))
-                        CALL grpnet_penalty(znorm, penid, penone, pentwo, gamma, shrink)
-                        IF(shrink == 0.0D0 .AND. bnorm == 0.0D0) CYCLE
-                        difbeta(ia(k):ib(k)) = shrink * zvec(ia(k):ib(k)) - beta(ia(k):ib(k))
-                        maxdif = MAXVAL( ABS(difbeta(ia(k):ib(k))) / (1.0D0 + ABS(beta(ia(k):ib(k)))) )
-                        beta(ia(k):ib(k)) = beta(ia(k):ib(k)) + difbeta(ia(k):ib(k))
-                        r = r - MATMUL(x(:,ia(k):ib(k)), difbeta(ia(k):ib(k)))
-                        ry = r * yo
-                        DO u=1,nobs
-                            IF (ry(u) < theta) THEN
-                                gr(u) = MAX(0.0D0, ry(u)) * (y(u) / theta)
-                            ELSE
-                                gr(u) = y(u)
-                            END IF
-                        END DO
-                        ctol = MAX(maxdif , ctol)
-                        IF(shrink > 0.0D0) THEN
-                            nzgrps(i) = nzgrps(i) + 1
-                            edfs(i) = edfs(i) + gsize(k) * shrink
-                        ENDIF
-                    END DO ! k=1,ngrps
+                    ! unweighted or weighted update?
+                    IF (weighted == 0) THEN
 
-                    ! update intercept
-                    IF (intercept == 1) THEN
-                        difibeta = (SUM(gr * w) / nobs) * (theta / 2.0D0)
-                        maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(i)))
-                        ibeta(i) = ibeta(i) + difibeta
-                        r = r - w * difibeta
-                        ry = r * yo
-                        DO u=1,nobs
-                            IF (ry(u) < theta) THEN
-                                gr(u) = MAX(0.0D0, ry(u)) * (y(u) / theta)
-                            ELSE
-                                gr(u) = y(u)
-                            END IF
-                        END DO
-                        ctol = MAX(maxdif, ctol)
-                    END IF ! (intercept == 1)
+                        ! update active groups
+                        DO k=1,ngrps
+                            IF(active(k) == 0) CYCLE
+                            penone = alpha * lambda(i) * pw(k) / xev(k)
+                            pentwo = (1.0D0 - alpha) * lambda(i) * pw(k) / xev(k)
+                            grad(ia(k):ib(k)) = MATMUL(r, x(:,ia(k):ib(k))) / nobs
+                            zvec(ia(k):ib(k)) = beta(ia(k):ib(k)) + grad(ia(k):ib(k)) / xev(k)
+                            znorm = SQRT(SUM(zvec(ia(k):ib(k))**2))
+                            bnorm = SQRT(SUM(beta(ia(k):ib(k))**2))
+                            CALL grpnet_penalty(znorm, penid, penone, pentwo, gamma, shrink)
+                            IF(shrink == 0.0D0 .AND. bnorm == 0.0D0) CYCLE
+                            difbeta(ia(k):ib(k)) = shrink * zvec(ia(k):ib(k)) - beta(ia(k):ib(k))
+                            maxdif = MAXVAL( ABS(difbeta(ia(k):ib(k))) / (1.0D0 + ABS(beta(ia(k):ib(k)))) )
+                            beta(ia(k):ib(k)) = beta(ia(k):ib(k)) + difbeta(ia(k):ib(k))
+                            eta = eta + MATMUL(x(:,ia(k):ib(k)), difbeta(ia(k):ib(k)))
+                            r = y / (1.0D0 + EXP(eta * y))
+                            ctol = MAX(maxdif , ctol)
+                            IF(shrink > 0.0D0) THEN
+                                nzgrps(i) = nzgrps(i) + 1
+                                edfs(i) = edfs(i) + gsize(k) * shrink
+                            ENDIF
+                        END DO ! k=1,ngrps
+
+                        ! update intercept
+                        IF (intercept == 1) THEN
+                            difibeta = ( SUM(r) / nobs ) * 4.0D0
+                            maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(i)))
+                            ibeta(i) = ibeta(i) + difibeta
+                            eta = eta + difibeta
+                            r = y / (1.0D0 + EXP(eta * y))
+                            ctol = MAX(maxdif, ctol)
+                        END IF ! (intercept == 1)
+
+                    ELSE
+
+                        ! update active groups
+                        DO k=1,ngrps
+                            IF(active(k) == 0) CYCLE
+                            penone = alpha * lambda(i) * pw(k) / xev(k)
+                            pentwo = (1.0D0 - alpha) * lambda(i) * pw(k) / xev(k)
+                            grad(ia(k):ib(k)) = MATMUL(r, x(:,ia(k):ib(k))) / nobs
+                            zvec(ia(k):ib(k)) = beta(ia(k):ib(k)) + grad(ia(k):ib(k)) / xev(k)
+                            znorm = SQRT(SUM(zvec(ia(k):ib(k))**2))
+                            bnorm = SQRT(SUM(beta(ia(k):ib(k))**2))
+                            CALL grpnet_penalty(znorm, penid, penone, pentwo, gamma, shrink)
+                            IF(shrink == 0.0D0 .AND. bnorm == 0.0D0) CYCLE
+                            difbeta(ia(k):ib(k)) = shrink * zvec(ia(k):ib(k)) - beta(ia(k):ib(k))
+                            maxdif = MAXVAL( ABS(difbeta(ia(k):ib(k))) / (1.0D0 + ABS(beta(ia(k):ib(k)))) )
+                            beta(ia(k):ib(k)) = beta(ia(k):ib(k)) + difbeta(ia(k):ib(k))
+                            eta = eta + MATMUL(x(:,ia(k):ib(k)), difbeta(ia(k):ib(k))) / w
+                            r = w * y / (1.0D0 + EXP(eta * y))
+                            ctol = MAX(maxdif , ctol)
+                            IF(shrink > 0.0D0) THEN
+                                nzgrps(i) = nzgrps(i) + 1
+                                edfs(i) = edfs(i) + gsize(k) * shrink
+                            ENDIF
+                        END DO ! k=1,ngrps
+
+                        ! update intercept
+                        IF (intercept == 1) THEN
+                            difibeta = ( SUM(r * w) / nobs ) * 4.0D0
+                            maxdif = ABS(difibeta) / (1.0D0 + ABS(ibeta(i)))
+                            ibeta(i) = ibeta(i) + difibeta
+                            eta = eta + difibeta
+                            r = w * y / (1.0D0 + EXP(eta * y))
+                            ctol = MAX(maxdif, ctol)
+                        END IF ! (intercept == 1)
+
+                    END IF !(weighted == 0)
 
                     ! convergence check
                     IF(ctol < eps) EXIT
@@ -405,7 +387,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
                 violations = 0
                 DO k=1,ngrps
                     IF(strong(k) == 0 .OR. active(k) == 1) CYCLE
-                    grad(ia(k):ib(k)) = MATMUL(gr, x(:,ia(k):ib(k))) / nobs
+                    grad(ia(k):ib(k)) = MATMUL(r, x(:,ia(k):ib(k))) / nobs
                     gradnorm(k) = SQRT(SUM(grad(ia(k):ib(k))**2))
                     IF (gradnorm(k) > alpha * lambda(i) * pw(k)) THEN
                         active(k) = 1
@@ -422,7 +404,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
             violations = 0
             DO k=1,ngrps
                 IF (strong(k) == 1) CYCLE
-                grad(ia(k):ib(k)) = MATMUL(gr, x(:,ia(k):ib(k))) / nobs
+                grad(ia(k):ib(k)) = MATMUL(r, x(:,ia(k):ib(k))) / nobs
                 gradnorm(k) = SQRT(SUM(grad(ia(k):ib(k))**2))
                 IF (gradnorm(k) + 1e-8 > alpha * lambda(i) * pw(k)) THEN
                     strong(k) = 1
@@ -448,7 +430,7 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
         ! calculate nzcoef !
 
         ! calculate deviance !
-        CALL grpnet_hsvm_dev(nobs, y, r, w**2, theta, devs(i))
+        CALL grpnet_logit_dev(nobs, y, eta, w**2, devs(i))
         ! calculate deviance !
 
         ! save results !
@@ -471,35 +453,20 @@ SUBROUTINE grpnet_hsvm(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, &
     END IF
     IF (intercept == 1) THEN
         ibeta = ibeta - MATMUL(xmean, betas)
-        IF (nzgrps(1) == 1) THEN
-            nulldev = devs(1)
-        ELSE
-            r = y - w * SUM(y * w) / nobs
-            CALL grpnet_hsvm_dev(nobs, y, r, w**2, theta, nulldev)
-        END IF
+        eta = SUM(y * w**2) / nobs
     ELSE
-        r = y - off
-        CALL grpnet_hsvm_dev(nobs, y, r, w**2, theta, nulldev)
+        eta = off
     END IF
+    CALL grpnet_logit_dev(nobs, y, eta, w**2, nulldev)
     pw = xsdev
 ! --------------- POST PROCESSING --------------- !
 
-
 END SUBROUTINE
 
-SUBROUTINE grpnet_hsvm_dev(nobs, y, mu, wt, theta, dev)
+
+SUBROUTINE grpnet_logit_dev(nobs, y, mu, wt, dev)
     IMPLICIT NONE
-    INTEGER nobs, i
-    DOUBLE PRECISION y(nobs), mu(nobs), wt(nobs), theta, dev, muy(nobs)
-    dev = 0.0D0
-    muy = (y - mu) * y / wt       ! NOTE: input mu is actually r = y - mu
-    DO i=1,nobs
-        IF(muy(i) > 1.0D0) CYCLE
-        IF(muy(i) > 1.0D0 - theta) THEN
-            dev = dev + wt(i) * ( (1.0D0 - muy(i))**2 ) / (2.0D0 * theta)
-        ELSE
-            dev = dev + wt(i) * ( 1.0D0 - muy(i) - theta / 2.0D0 )
-        END IF
-    END DO
-    dev = 2.0D0 * dev
+    INTEGER nobs
+    DOUBLE PRECISION y(nobs), mu(nobs), wt(nobs), dev
+    dev = 2.0D0 * SUM( wt * log(1.0D0 + EXP(-mu * y)) )
 END SUBROUTINE

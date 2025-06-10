@@ -15,7 +15,8 @@ grpnet(x, \dots)
        y, 
        group, 
        family = c("gaussian", "multigaussian",
-                  "hsvm", "binomial", "multinomial", 
+                  "svm1", "svm2", "logit",
+                  "binomial", "multinomial", 
                   "poisson", "negative.binomial", 
                   "Gamma", "inverse.gaussian"),
        weights = NULL, 
@@ -41,7 +42,8 @@ grpnet(x, \dots)
        data, 
        use.rk = TRUE,
        family = c("gaussian", "multigaussian",
-                  "hsvm", "binomial", "multinomial", 
+                  "svm1", "svm2", "logit",
+                  "binomial", "multinomial", 
                   "poisson", "negative.binomial", 
                   "Gamma", "inverse.gaussian"),
        weights = NULL,
@@ -83,7 +85,7 @@ Optional data frame containing the variables referenced in \code{formula}.
 If \code{TRUE} (default), the \code{\link{rk.model.matrix}} function is used to build the model matrix. Otherwise, the \code{\link{model.matrix}} function is used to build the model matrix. Additional arguments to the \code{\link{rk.model.matrix}} function can be passed via the \code{...} argument.
 }
   \item{family}{
-Character specifying the assumed distribution for the response variable. Partial matching is allowed. Options include \code{"gaussian"} (real-valued vector), \code{"multigaussian"} (real-valued matrix), \code{"hsvm"} (binary response), \code{"binomial"} (binary response), \code{"multinomial"} (multi-class response), \code{"poisson"} (count response), \code{"negative.binomial"} (count response), \code{"Gamma"} (positive real-valued), or \code{"inverse.gaussian"} (positive real-valued). 
+Character specifying the assumed distribution for the response variable. Partial matching is allowed. Options include \code{"gaussian"} (real-valued vector), \code{"multigaussian"} (real-valued matrix), \code{"svm1"} (binary response), \code{"svm2"} (binary response), \code{"logit"} (binary response), \code{"binomial"} (binary response), \code{"multinomial"} (multi-class response), \code{"poisson"} (count response), \code{"negative.binomial"} (count response), \code{"Gamma"} (positive real-valued), or \code{"inverse.gaussian"} (positive real-valued). 
 }
   \item{weights}{
 Optional vector of length \eqn{n} with non-negative weights to use for weighted (penalized) likelihood estimation. Defaults to a vector of ones.
@@ -115,7 +117,8 @@ Character specifying which (group) penalty to use: LASSO , MCP, or SCAD.
 Penalty hyperparameter that satisfies \eqn{\gamma > 1} for MCP and \eqn{\gamma > 2} for SCAD. Ignored for LASSO penalty.
 } 
   \item{theta}{
-Additional ("size") parameter for negative binomial responses, where the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
+For SVM1: additional ("smoothing") parameter, that controls the smoothing rate of the hinge loss function.
+For negative binomial: additional ("size") parameter, where the variance function is defined as \eqn{V(\mu) = \mu + \mu^2/ \theta}
 }
   \item{standardized}{
 Logical indicating whether the predictors should be groupwise standardized. If \code{TRUE}, each column of \code{x} is mean-centered and each predictor group's design matrix is scaled to have a mean-square of one before fitting the model. Regardless of whether standardization is used, the coefficients are always returned on the original data scale.
@@ -234,8 +237,8 @@ Unlike the \code{\link{glm}} function, the \code{family} argument of the \code{\
 Currently, there is only one available link function for each \code{family}: \cr
 * gaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
 * multigaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
-* hsvm (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
-* binomial (logit): \eqn{\log(\frac{\pi}{1 - \pi}) = \mathbf{X}^\top \boldsymbol\beta} \cr
+* svm1/svm2 (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
+* binomial/logit (logit): \eqn{\log(\frac{\pi}{1 - \pi}) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * multinomial (symmetric): \eqn{\pi_\ell = \frac{\exp(\mathbf{X}^\top \boldsymbol\beta_\ell)}{\sum_{l = 1}^m \exp(\mathbf{X}^\top \boldsymbol\beta_l)}} \cr
 * poisson (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * negative.binomial (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
@@ -243,8 +246,8 @@ Currently, there is only one available link function for each \code{family}: \cr
 * inverse.gaussian (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
 }
 
-\section{Classification problems (hsvm/binomial/multinomial)}{
-For \code{"hsvm"} responses, three different possibilities exist for the input response: \cr
+\section{Classification problems (svm1/svm2/logit/binomial/multinomial)}{
+For \code{"svm1"}, \code{"svm2"}, and \code{"logit"} responses, three different possibilities exist for the input response: \cr
 1. vector coercible into a factor with two levels \cr
 2. matrix with two columns (# successes, # failures) \cr
 3. numeric vector with entries between -1 and 1 \cr
@@ -313,7 +316,7 @@ plot(mod)
 
 
 
-######***######   family = "hsvm"   ######***######
+######***######   family = "svm1"   ######***######
 
 # load data
 data(auto)
@@ -322,7 +325,45 @@ data(auto)
 auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
 
 # fit model (formula method, response = origin with 2 levels)
-mod <- grpnet(origin ~ ., data = auto, family = "hsvm")
+mod <- grpnet(origin ~ ., data = auto, family = "svm1")
+
+# print regularization path info
+mod
+
+# plot proportion of null deviance explained
+plot(mod)
+
+
+
+######***######   family = "svm2"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "svm2")
+
+# print regularization path info
+mod
+
+# plot proportion of null deviance explained
+plot(mod)
+
+
+
+######***######   family = "logit"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "logit")
 
 # print regularization path info
 mod

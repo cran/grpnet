@@ -1,3 +1,32 @@
+Version 1.0   (2025-06-09)
+
+   1) New loss functions for binary classification
+	* logit: alternative implementation of binomial for y in {-1,1}
+	* svm2: squared hinge loss function for y in {-1,1}
+	* Note: hsvm has been renamed svm1 (see #3 below)
+
+   2) visualize.loss: new function for visualizing loss functions
+	* Plots requested grpnet loss versus mu given a particular y
+	* Only required input is the name of the family/loss function
+	* Optional inputs are x sequence, y value, and plotting specs
+
+   3) New alternative (simpler) names for the two SVM loss functions
+	* hsvm   ---->   svm1   (quadratically smoothed hinge loss)
+	* sqsvm  ---->   svm2   (squared hinge loss)
+	* Old names will be internally converted to new names
+
+   4) Inconsequential changes/updates to family = "hsvm"/"svm1" 
+	* R_grpnet_hsvm: Renamed the deviance function
+	* grpnet.default: removed unnecessary testR in line 517
+	* family documentation: fixed typo (hvsm ---> hsvm)
+
+   5) Improvements to family.grpnet 
+	* Previously there was no checking or partial matching allowed
+	* Now checks whether input family is valid (after partial matching)
+	* Also functions like an S3 method to return family component
+
+
+
 Version 0.9   (2025-05-01)
 
    1) Bug fixes in coef.grpnet()

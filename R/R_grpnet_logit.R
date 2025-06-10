@@ -1,11 +1,11 @@
-R_grpnet_hsvm <-
+R_grpnet_logit <-
   function(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, 
            nlam, lambda, lmr, penid, gamma, eps, maxit,
            standardize, intercept, ibeta, betas, iters,
-           nzgrps, nzcoef, edfs, devs, nulldev, theta){
-    # grpnet_svm.f90 translation to R
+           nzgrps, nzcoef, edfs, devs, nulldev){
+    # grpnet_logit.f90 translation to R
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-04-24
+    # Updated: 2025-05-29
     
     
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
@@ -25,17 +25,15 @@ R_grpnet_hsvm <-
     wmin <- min(w)
     wmax <- max(w)
     if(wmax > wmin){
+      weighted <- 1L
       w <- nobs * w / sum(w)     # ! normalize so SUM(w) = nobs
       w <- sqrt(w)
-      yo <- y / w
-      y <- w * y
-      off <- w * off
       for(i in 1:nobs){
         x[i,] <- w[i] * x[i,]
       }
     } else {
+      weighted <- 0L
       w <- rep(1.0, nobs)
-      yo <- y
     }
     # ! --------------- CHECK WEIGHTS --------------- ! #
     
@@ -80,7 +78,7 @@ R_grpnet_hsvm <-
         xev[k] <- R_grpnet_maxeigval(A = xtx, N = gsize[k])
       }
     }
-    xev <- xev * (2.0 / theta)
+    xev <- xev / 4
     # ! --------------- GET MAX EIGENVALUE --------------- ! #
     
     
@@ -95,11 +93,8 @@ R_grpnet_hsvm <-
     gradnorm <- rep(0.0, ngrps)
     twolam <- 0.0
     devs <- rep(0.0, nlam)
-    r <- y - off
-    ry <- r * yo
-    id <- which(ry < theta)
-    gr <- y
-    gr[id] <- y[id] * pmax(0, ry[id]) / theta
+    eta <- off / w
+    r <- w * y / (1 + exp(eta * y))
     # ! --------------- MISCELLANEOUS INITIALIZATIONS --------------- ! #
     
     
@@ -131,29 +126,23 @@ R_grpnet_hsvm <-
           # ! update active groups
           for(k in 1:ngrps){
             if(active[k] == 0L) next
-            grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], gr) / nobs
+            grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
             zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / xev[k]
             difbeta[ia[k]:ib[k]] <- zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
             maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
             beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
-            r <- r - x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]
-            ry <- r * yo
-            id <- which(ry < theta)
-            gr <- y
-            gr[id] <- y[id] * pmax(0, ry[id]) / theta
+            eta <- eta + (x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]) / w
+            r <- w * y / (1 + exp(eta * y))
             ctol <- max(maxdif, ctol)
           } # ! k=1,ngrps
           
           # ! update intercept
           if(intercept == 1L){
-            difibeta <- (sum(gr * w) / nobs) * (theta / 2)
+            difibeta <- ( sum(r * w) / nobs ) * 4
             maxdif <- abs(difibeta) / (1.0 + abs(ibeta[i]))
             ibeta[i] <- ibeta[i] + difibeta
-            r <- r - w * difibeta
-            ry <- r * yo
-            id <- which(ry < theta)
-            gr <- y
-            gr[id] <- y[id] * pmax(0, ry[id]) / theta
+            eta <- eta + difibeta
+            r <- w * y / (1 + exp(eta * y))
             ctol <- max(maxdif, ctol)
           } # if(intercept == 1L)
           
@@ -164,29 +153,13 @@ R_grpnet_hsvm <-
         
       } else {
         
-        while(iter < maxit){
-          
-          # ! update iter and reset counters
-          ctol <- 0.0
-          iter <- iter + 1L
-          
-          # ! intercept only
-          if(intercept == 1L){
-            difibeta <- (sum(gr * w) / nobs) * (theta / 2)
-            maxdif <- abs(difibeta) / (1.0 + abs(ibeta[i]))
-            ibeta[i] <- ibeta[i] + difibeta
-            r <- r - w * difibeta
-            ry <- r * yo
-            id <- which(ry < theta)
-            gr <- y
-            gr[id] <- y[id] * pmax(0, ry[id]) / theta
-            ctol <- max(maxdif, ctol)
-          }
-          
-          # ! convergence check
-          if(ctol < eps) break
-          
-        }  # ! WHILE(iter < maxit)
+        # ! intercept only
+        iter <- 1L
+        if(intercept == 1L){
+          ibeta[i] <- log( sum((1 + y) * w^2) / sum((1 - y) * w^2) )
+          eta <- eta + ibeta[i]
+          r <- w * y / (1 + exp(eta * y))
+        }
         
       } # ! (nzgrps[i] > 0)
       # ! iterate until active coefficients converge ! #
@@ -194,7 +167,7 @@ R_grpnet_hsvm <-
       # ! create lambda sequence ! #
       for(k in 1:ngrps){
         if(pw[k] > macheps){
-          grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], gr) / nobs
+          grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
           gradnorm[k] <- sqrt( sum(grad[ia[k]:ib[k]]^2) ) / pw[k]
         }
       }
@@ -215,7 +188,7 @@ R_grpnet_hsvm <-
       # ! create lambda sequence ! #
       
       # ! calculate deviance ! #
-      devs[i] <- R_grpnet_svm_dev(nobs, y, r, w^2, theta)
+      devs[i] <- R_grpnet_logit_dev(nobs, y, eta, w^2)
       # ! calculate deviance ! #
       
       # ! save results ! # 
@@ -240,7 +213,7 @@ R_grpnet_hsvm <-
         beta <- betas[,i-1]
         twolam <- alpha * (2.0 * lambda[i] - lambda[i-1])
       } else {
-        grad <- crossprod(x, gr) / nobs
+        grad <- crossprod(x, r) / nobs
       }
       # ! initializations ! # 
       
@@ -271,44 +244,78 @@ R_grpnet_hsvm <-
             edfs[i] <- 0.0
             ctol <- 0.0
             
-            # ! update active groups
-            for(k in 1:ngrps){
-              if(active[k] == 0L) next
-              penone <- alpha * lambda[i] * pw[k] / xev[k]
-              pentwo <- (1 - alpha) * lambda[i] * pw[k] / xev[k]
-              grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], gr) / nobs
-              zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / xev[k]
-              znorm <- sqrt(sum(zvec[ia[k]:ib[k]]^2))
-              bnorm <- sqrt(sum(beta[ia[k]:ib[k]]^2))
-              shrink <- R_grpnet_penalty(znorm, penid, penone, pentwo, gamma)
-              if(shrink == 0.0 && bnorm == 0.0) next
-              difbeta[ia[k]:ib[k]] <- shrink * zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
-              maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
-              beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
-              r <- r - x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]
-              ry <- r * yo
-              id <- which(ry < theta)
-              gr <- y
-              gr[id] <- y[id] * pmax(0, ry[id]) / theta
-              ctol <- max(maxdif , ctol)
-              if(shrink > 0.0){
-                nzgrps[i] <- nzgrps[i] + 1L
-                edfs[i] <- edfs[i] + gsize[k] * shrink
-              }
-            } # ! k=1,ngrps
-            
-            # ! update intercept
-            if(intercept == 1L){
-              difibeta <- (sum(gr * w) / nobs) * (theta / 2)
-              maxdif <- abs(difibeta) / (1.0 + abs(ibeta[i]))
-              ibeta[i] <- ibeta[i] + difibeta
-              r <- r - w * difibeta
-              ry <- r * yo
-              id <- which(ry < theta)
-              gr <- y
-              gr[id] <- y[id] * pmax(0, ry[id]) / theta
-              ctol <- max(maxdif, ctol)
-            } # ! (intercept == 1)
+            # ! unweighted or weighted update?
+            if(weighted == 0L){
+              
+              # ! update active groups
+              for(k in 1:ngrps){
+                if(active[k] == 0L) next
+                penone <- alpha * lambda[i] * pw[k] / xev[k]
+                pentwo <- (1.0 - alpha) * lambda[i] * pw[k] / xev[k]
+                grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+                zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / xev[k]
+                znorm <- sqrt(sum(zvec[ia[k]:ib[k]]^2))
+                bnorm <- sqrt(sum(beta[ia[k]:ib[k]]^2))
+                shrink <- R_grpnet_penalty(znorm, penid, penone, pentwo, gamma)
+                if(shrink == 0.0 && bnorm == 0.0) next
+                difbeta[ia[k]:ib[k]] <- shrink * zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
+                maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
+                beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
+                eta <- eta + x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]
+                r <- y / (1 + exp(eta * y))
+                ctol <- max(maxdif , ctol)
+                if(shrink > 0.0){
+                  nzgrps[i] <- nzgrps[i] + 1L
+                  edfs[i] <- edfs[i] + gsize[k] * shrink
+                }
+              } # ! k=1,ngrps
+              
+              # ! update intercept
+              if(intercept == 1L){
+                difibeta <- ( sum(r) / nobs ) * 4
+                maxdif <- abs(difibeta) / (1 + abs(ibeta[i]))
+                ibeta[i] <- ibeta[i] + difibeta
+                eta <- eta + difibeta
+                r <- y / (1 + exp(eta * y))
+                ctol <- max(maxdif, ctol)
+              } # ! (intercept == 1)
+              
+            } else {
+              
+              # ! update active groups
+              for(k in 1:ngrps){
+                if(active[k] == 0L) next
+                penone <- alpha * lambda[i] * pw[k] / xev[k]
+                pentwo <- (1 - alpha) * lambda[i] * pw[k] / xev[k]
+                grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
+                zvec[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + grad[ia[k]:ib[k]] / xev[k]
+                znorm <- sqrt(sum(zvec[ia[k]:ib[k]]^2))
+                bnorm <- sqrt(sum(beta[ia[k]:ib[k]]^2))
+                shrink <- R_grpnet_penalty(znorm, penid, penone, pentwo, gamma)
+                if(shrink == 0.0 && bnorm == 0.0) next
+                difbeta[ia[k]:ib[k]] <- shrink * zvec[ia[k]:ib[k]] - beta[ia[k]:ib[k]]
+                maxdif <- max( abs(difbeta[ia[k]:ib[k]]) / (1.0 + abs(beta[ia[k]:ib[k]])) )
+                beta[ia[k]:ib[k]] <- beta[ia[k]:ib[k]] + difbeta[ia[k]:ib[k]]
+                eta <- eta + (x[,ia[k]:ib[k]] %*% difbeta[ia[k]:ib[k]]) / w
+                r <- w * y / (1 + exp(eta * y))
+                ctol <- max(maxdif , ctol)
+                if(shrink > 0.0){
+                  nzgrps[i] <- nzgrps[i] + 1L
+                  edfs[i] <- edfs[i] + gsize[k] * shrink
+                }
+              } # ! k=1,ngrps
+              
+              # ! update intercept
+              if(intercept == 1L){
+                difibeta <- ( sum(r * w) / nobs ) * 4
+                maxdif <- abs(difibeta) / (1 + abs(ibeta[i]))
+                ibeta[i] <- ibeta[i] + difibeta
+                eta <- eta + difibeta
+                r <- w * y / (1 + exp(eta * y))
+                ctol <- max(maxdif, ctol)
+              } # ! (intercept == 1)
+              
+            } # ! IF (weighted == 0)
             
             # ! convergence check
             if(ctol < eps) break
@@ -320,7 +327,7 @@ R_grpnet_hsvm <-
           violations <- 0L
           for(k in 1:ngrps){
             if(strong[k] == 0L | active[k] == 1L) next
-            grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], gr) / nobs
+            grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
             gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k]]^2))
             if(gradnorm[k] > alpha * lambda[i] * pw[k]){
               active[k] <- 1L
@@ -337,7 +344,7 @@ R_grpnet_hsvm <-
         violations <- 0L
         for(k in 1:ngrps){
           if(strong[k] == 1L) next
-          grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], gr) / nobs
+          grad[ia[k]:ib[k]] <- crossprod(x[,ia[k]:ib[k]], r) / nobs
           gradnorm[k] <- sqrt(sum(grad[ia[k]:ib[k]]^2))
           if(gradnorm[k] + 1e-8 > alpha * lambda[i] * pw[k]){
             strong[k] <- 1
@@ -362,13 +369,16 @@ R_grpnet_hsvm <-
       }
       # ! calculate nzcoef ! #
       
+      # ! calculate deviance ! #
+      devs[i] <- R_grpnet_logit_dev(nobs, y, eta, w^2)
+      # ! calculate deviance ! #
+      
       # ! save results ! #
       betas[,i] <- beta
       iters[i] <- iter
       nzgrps[i] <- nzgrps[i] + intercept
       nzcoef[i] <- nzcoef[i] + intercept
       edfs[i] <- edfs[i] + as.numeric(intercept)
-      devs[i] <- R_grpnet_svm_dev(nobs, y, r, w^2, theta)
       # ! save results ! #
       
     }
@@ -383,15 +393,11 @@ R_grpnet_hsvm <-
     }
     if(intercept == 1L){
       ibeta <- ibeta - xmean %*% betas
-      if(nzgrps[1] == 1L){
-        nulldev <- devs[1]
-      } else {
-        r <- y - w * sum(y * w) / nobs
-        nulldev <- R_grpnet_svm_dev(nobs, y, r, w^2, theta)
-      }
+      eta <- rep(sum(y * w^2) / nobs, nobs)
     } else {
-      nulldev <- R_grpnet_svm_dev(nobs, y, off, w^2, theta)
+      eta <- off
     }
+    nulldev <- R_grpnet_logit_dev(nobs, y, eta, w^2)
     names(xsdev) <- names(pw)
     pw <- xsdev
     # ! --------------- POST PROCESSING --------------- ! #
@@ -429,19 +435,11 @@ R_grpnet_hsvm <-
     # ! --------------- RETURN RESULTS --------------- ! #
     
     
-  } # R_grpnet_svm.R
+  } # R_grpnet_logit.R
 
 
-R_grpnet_svm_dev <-
-  function(nobs, y, mu, wt, theta, dev = 0.0){
-    muy <- (y - mu) * y / wt       # NOTE: input mu is actually r = y - mu
-    for(i in 1:nobs){
-      if(muy[i] > 1.0) next
-      if(muy[i] > 1.0 - theta){
-        dev <- dev + wt[i] * (1.0 - muy[i])^2 / (2.0 * theta)
-      } else {
-        dev <- dev + wt[i] * ( 1.0 - muy[i] - theta / 2.0 )
-      }
-    }
-    return(2.0 * dev)
-  } # R_grpnet_svm_dev.R
+R_grpnet_logit_dev <-
+  function(nobs, y, mu, wt, dev){
+    dev <- 2 * sum( wt * log(1 + exp(-mu*y)) )
+    return(dev)
+  } # R_grpnet_logit_dev.R

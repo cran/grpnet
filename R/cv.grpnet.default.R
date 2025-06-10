@@ -21,7 +21,7 @@ cv.grpnet.default <-
            ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-04-22
+    # Updated: 2025-05-29
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -67,7 +67,9 @@ cv.grpnet.default <-
     } else {
       family <- as.character(family[1])
       if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
-      families <- c("gaussian", "multigaussian", "hsvm", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+      if(family == "hsvm") family <- "svm1"
+      if(family == "sqsvm") family <- "svm2"
+      families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
       family <- pmatch(family, families)
       if(is.na(family)) stop("'family' not recognized")
       family <- families[family]
@@ -102,20 +104,20 @@ cv.grpnet.default <-
         y <- as.numeric(y)
         family <- "gaussian"
       }
-    } else if(family == "hsvm"){
+    } else if(family %in% c("svm1", "svm2", "logit")){
       if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
         ylev <- levels(y)
         y <- ifelse(y == ylev[1], -1.0, 1.0)
       } else if(is.matrix(y)) {
-        if(ncol(y) != 2L | any(y < 0)) stop("Input 'y' must be a matrix (# success, # failure) when family = 'hsvm'")
+        if(ncol(y) != 2L | any(y < 0)) stop("Input 'y' must be a matrix (# success, # failure) when family %in% c('svm1', 'svm2', 'logit')")
         ytotal <- rowSums(y)
         weights <- weights * ytotal
         wsqrt <- sqrt(weights)
         y <- 2 * (y[,1] / ytotal) - 1
       } else {
         y <- as.numeric(y)
-        if(any(y < -1) | any(y > 1)) stop("Input 'y' must contain values between -1 and 1 when family = 'hsvm'" )
+        if(any(y < -1) | any(y > 1)) stop("Input 'y' must contain values between -1 and 1 when family %in% c('svm1', 'svm2', 'logit')" )
       }
       if(is.null(ylev)) ylev <- c(-1, 1)
       yfac <- factor(ifelse(y <= 0.0, ylev[1], ylev[2]), levels = ylev)
@@ -245,12 +247,12 @@ cv.grpnet.default <-
     
     ### check type.measure
     if(is.null(type.measure)){
-      type.measure <- ifelse(family %in% c("hsvm", "binomial", "multinomial"), "class", "mae")
+      type.measure <- ifelse(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial"), "class", "mae")
     } else {
       type.measure <- pmatch(as.character(type.measure[1]), c("deviance", "mse", "mae", "class"))
       if(is.na(type.measure)) stop("Invalid 'type.measure' argument.")
       type.measure <- c("deviance", "mse", "mae", "class")[type.measure]
-      if(type.measure == "class" && !(family %in% c("hsvm", "binomial", "multinomial")))
+      if(type.measure == "class" && !(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial")))
         stop("Input 'type.measure' can only be 'class' for binomial and multinomial family")
     }
     

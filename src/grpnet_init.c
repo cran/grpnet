@@ -2,7 +2,7 @@
 //  grpnet_init.c
 //  
 //
-//  Created by Nathaniel E. Helwig on 2023-07-10
+//  Created by Nathaniel E. Helwig on 2023-07-10      [last updated 2025-05-29]
 //
 
 #include <R_ext/RS.h>
@@ -15,41 +15,52 @@
 
 /* .Fortran calls */
 extern void F77_NAME(grpnet_binomial)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_binomial_dev)(void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_gamma)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_gamma_dev)(void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_gaussian)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_hsvm)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_invgaus)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_invgaus_dev)(void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_logit)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_logit_dev)(void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_maxeigval)(void *, void *, void *);
 extern void F77_NAME(grpnet_multigaus)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_multinom)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_poisson)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_negbin)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_maxeigval)(void *, void *, void *);
-extern void F77_NAME(grpnet_penalty)(void *, void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_binomial_dev)(void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_gamma_dev)(void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_invgaus_dev)(void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_multinom_dev)(void *, void *, void *, void *, void *, void *);
-extern void F77_NAME(grpnet_poisson_dev)(void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_negbin)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_negbin_dev)(void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_penalty)(void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_poisson)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_poisson_dev)(void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_svm1)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_svm1_dev)(void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_svm2)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_svm2_dev)(void *, void *, void *, void *, void *);
+
 
 static const R_FortranMethodDef FortranEntries[] = {
     {"grpnet_binomial", (DL_FUNC) &F77_NAME(grpnet_binomial), 27},
+    {"grpnet_binomial_dev",  (DL_FUNC) &F77_NAME(grpnet_binomial_dev),  5},
     {"grpnet_gamma",    (DL_FUNC) &F77_NAME(grpnet_gamma),    27},
+    {"grpnet_gamma_dev",  (DL_FUNC) &F77_NAME(grpnet_gamma_dev),  5},
     {"grpnet_gaussian", (DL_FUNC) &F77_NAME(grpnet_gaussian), 27},
-    {"grpnet_hsvm", (DL_FUNC) &F77_NAME(grpnet_hsvm), 28},
     {"grpnet_invgaus", (DL_FUNC) &F77_NAME(grpnet_invgaus), 27},
+    {"grpnet_invgaus_dev",  (DL_FUNC) &F77_NAME(grpnet_invgaus_dev),  5},
+    {"grpnet_logit", (DL_FUNC) &F77_NAME(grpnet_logit), 27},
+    {"grpnet_logit_dev",  (DL_FUNC) &F77_NAME(grpnet_logit_dev),  5},
+    {"grpnet_maxeigval",  (DL_FUNC) &F77_NAME(grpnet_maxeigval),  3},
     {"grpnet_multigaus", (DL_FUNC) &F77_NAME(grpnet_multigaus), 28},
     {"grpnet_multinom", (DL_FUNC) &F77_NAME(grpnet_multinom), 28},
-    {"grpnet_poisson",  (DL_FUNC) &F77_NAME(grpnet_poisson),  27},
-    {"grpnet_negbin",  (DL_FUNC) &F77_NAME(grpnet_negbin),  28},
-    {"grpnet_maxeigval",  (DL_FUNC) &F77_NAME(grpnet_maxeigval),  3},
-    {"grpnet_penalty",  (DL_FUNC) &F77_NAME(grpnet_penalty),  6},
-    {"grpnet_binomial_dev",  (DL_FUNC) &F77_NAME(grpnet_binomial_dev),  5},
-    {"grpnet_gamma_dev",  (DL_FUNC) &F77_NAME(grpnet_gamma_dev),  5},
-    {"grpnet_invgaus_dev",  (DL_FUNC) &F77_NAME(grpnet_invgaus_dev),  5},
     {"grpnet_multinom_dev",  (DL_FUNC) &F77_NAME(grpnet_multinom_dev),  6},
-    {"grpnet_poisson_dev",  (DL_FUNC) &F77_NAME(grpnet_poisson_dev),  5},
+    {"grpnet_negbin",  (DL_FUNC) &F77_NAME(grpnet_negbin),  28},
     {"grpnet_negbin_dev",  (DL_FUNC) &F77_NAME(grpnet_negbin_dev),  6},
+    {"grpnet_penalty",  (DL_FUNC) &F77_NAME(grpnet_penalty),  6},
+    {"grpnet_poisson",  (DL_FUNC) &F77_NAME(grpnet_poisson),  27},
+    {"grpnet_poisson_dev",  (DL_FUNC) &F77_NAME(grpnet_poisson_dev),  5},
+    {"grpnet_svm1", (DL_FUNC) &F77_NAME(grpnet_svm1), 28},
+    {"grpnet_svm1_dev",  (DL_FUNC) &F77_NAME(grpnet_svm1_dev),  6},
+    {"grpnet_svm2", (DL_FUNC) &F77_NAME(grpnet_svm2), 27},
+    {"grpnet_svm2_dev",  (DL_FUNC) &F77_NAME(grpnet_svm2_dev),  5},
     {NULL, NULL, 0}
 };
 

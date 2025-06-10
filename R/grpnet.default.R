@@ -6,7 +6,8 @@ grpnet.default <-
            y,
            group,
            family = c("gaussian", "multigaussian", 
-                      "hsvm", "binomial", "multinomial",
+                      "svm1", "svm2", "logit",
+                      "binomial", "multinomial",
                       "poisson", "negative.binomial", 
                       "Gamma", "inverse.gaussian"),
            weights = NULL,
@@ -29,7 +30,7 @@ grpnet.default <-
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-04-22
+    # Updated: 2025-05-29
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -71,7 +72,9 @@ grpnet.default <-
     ### check family
     family <- as.character(family[1])
     if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
-    families <- c("gaussian", "multigaussian", "hsvm", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+    if(family == "hsvm") family <- "svm1"
+    if(family == "sqsvm") family <- "svm2"
+    families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
     family <- pmatch(family, families)
     if(is.na(family)) stop("'family' not recognized")
     family <- families[family]
@@ -107,20 +110,20 @@ grpnet.default <-
         y <- as.numeric(y)
         family <- gaussian()
       }
-    } else if(family$family == "hsvm"){
+    } else if(family$family %in% c("svm1", "svm2", "logit")){
       if(is.character(y)) y <- as.factor(y)
       if(is.factor(y)){
         ylev <- levels(y)
         y <- ifelse(y == ylev[1], -1.0, 1.0)
       } else if(is.matrix(y)) {
-        if(ncol(y) != 2L | any(y < 0)) stop("Input 'y' must be a matrix (# success, # failure) when family = 'hsvm'")
+        if(ncol(y) != 2L | any(y < 0)) stop("Input 'y' must be a matrix (# success, # failure) when family %in% c('svm1', 'svm2', 'logit')")
         ytotal <- rowSums(y)
         weights <- weights * ytotal
         wsqrt <- sqrt(weights)
         y <- 2 * (y[,1] / ytotal) - 1
       } else {
         y <- as.numeric(y)
-        if(any(y < -1) | any(y > 1)) stop("Input 'y' must contain values between -1 and 1 when family = 'hsvm'" )
+        if(any(y < -1) | any(y > 1)) stop("Input 'y' must contain values between -1 and 1 when family %in% c('svm1', 'svm2', 'logit')" )
       }
       if(is.null(ylev)) ylev <- c(-1, 1)
     } else if(family$family == "binomial"){
@@ -477,12 +480,12 @@ grpnet.default <-
       }
       res$betas <- betas
       
-    } else if(family$family == "hsvm"){
+    } else if(family$family == "svm1"){
       
       ## call fortran or R code
       if(proglang == "Fortran"){
         
-        res <- .Fortran("grpnet_hsvm",
+        res <- .Fortran("grpnet_svm1",
                         nobs = nobs,
                         nvars = nvars,
                         x = x,
@@ -514,34 +517,164 @@ grpnet.default <-
         
       } else {
         
-        res <- testR <- R_grpnet_hsvm(nobs = nobs,
-                                      nvars = nvars,
-                                      x = x,
-                                      y = y,
-                                      w = weights,
-                                      off = offset,
-                                      ngrps = ngrps,
-                                      gsize = gsize, 
-                                      pw = penalty.factor,
-                                      alpha = alpha,
-                                      nlam = nlambda,
-                                      lambda = lambda,
-                                      lmr = lambda.min.ratio, 
-                                      penid = penalty,
-                                      gamma = gamma,
-                                      eps = thresh,
-                                      maxit = maxit,
-                                      standardize = as.integer(standardized),
-                                      intercept = as.integer(intercept),
-                                      ibeta = rep(0.0, nlambda),
-                                      betas = matrix(0.0, nrow = nvars, ncol = nlambda),
-                                      iters = rep(0L, nlambda),
-                                      nzgrps = rep(0L, nlambda),
-                                      nzcoef = rep(0L, nlambda),
-                                      edfs = rep(0.0, nlambda),
-                                      devs = rep(0.0, nlambda),
-                                      nulldev = 0.0,
-                                      theta = theta)
+        res <- R_grpnet_svm1(nobs = nobs,
+                             nvars = nvars,
+                             x = x,
+                             y = y,
+                             w = weights,
+                             off = offset,
+                             ngrps = ngrps,
+                             gsize = gsize, 
+                             pw = penalty.factor,
+                             alpha = alpha,
+                             nlam = nlambda,
+                             lambda = lambda,
+                             lmr = lambda.min.ratio, 
+                             penid = penalty,
+                             gamma = gamma,
+                             eps = thresh,
+                             maxit = maxit,
+                             standardize = as.integer(standardized),
+                             intercept = as.integer(intercept),
+                             ibeta = rep(0.0, nlambda),
+                             betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                             iters = rep(0L, nlambda),
+                             nzgrps = rep(0L, nlambda),
+                             nzcoef = rep(0L, nlambda),
+                             edfs = rep(0.0, nlambda),
+                             devs = rep(0.0, nlambda),
+                             nulldev = 0.0,
+                             theta = theta)
+      } # end if(proglang == "Fortran")
+      
+    } else if(family$family == "svm2"){
+      
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        
+        res <- .Fortran("grpnet_svm2",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+        
+      } else {
+        
+        res <- R_grpnet_svm2(nobs = nobs,
+                             nvars = nvars,
+                             x = x,
+                             y = y,
+                             w = weights,
+                             off = offset,
+                             ngrps = ngrps,
+                             gsize = gsize, 
+                             pw = penalty.factor,
+                             alpha = alpha,
+                             nlam = nlambda,
+                             lambda = lambda,
+                             lmr = lambda.min.ratio, 
+                             penid = penalty,
+                             gamma = gamma,
+                             eps = thresh,
+                             maxit = maxit,
+                             standardize = as.integer(standardized),
+                             intercept = as.integer(intercept),
+                             ibeta = rep(0.0, nlambda),
+                             betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                             iters = rep(0L, nlambda),
+                             nzgrps = rep(0L, nlambda),
+                             nzcoef = rep(0L, nlambda),
+                             edfs = rep(0.0, nlambda),
+                             devs = rep(0.0, nlambda),
+                             nulldev = 0.0)
+      } # end if(proglang == "Fortran")
+      
+    } else if(family$family == "logit"){
+      
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        
+        res <- .Fortran("grpnet_logit",
+                        nobs = nobs,
+                        nvars = nvars,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = rep(0.0, nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+        
+      } else {
+        
+        res <- R_grpnet_logit(nobs = nobs,
+                              nvars = nvars,
+                              x = x,
+                              y = y,
+                              w = weights,
+                              off = offset,
+                              ngrps = ngrps,
+                              gsize = gsize, 
+                              pw = penalty.factor,
+                              alpha = alpha,
+                              nlam = nlambda,
+                              lambda = lambda,
+                              lmr = lambda.min.ratio, 
+                              penid = penalty,
+                              gamma = gamma,
+                              eps = thresh,
+                              maxit = maxit,
+                              standardize = as.integer(standardized),
+                              intercept = as.integer(intercept),
+                              ibeta = rep(0.0, nlambda),
+                              betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                              iters = rep(0L, nlambda),
+                              nzgrps = rep(0L, nlambda),
+                              nzcoef = rep(0L, nlambda),
+                              edfs = rep(0.0, nlambda),
+                              devs = rep(0.0, nlambda),
+                              nulldev = 0.0)
       } # end if(proglang == "Fortran")
       
     } else if(family$family == "binomial"){

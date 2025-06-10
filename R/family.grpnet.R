@@ -2,16 +2,33 @@ family.grpnet <-
   function(object, theta = 1){
     # prepare family for grpnet
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-04-22
+    # Updated: 2025-06-03
     
+    # check class of object
+    if(inherits(object, "cv.grpnet")){
+      return(object$grpnet.fit$family)
+    } else if(inherits(object, "grpnet")){
+      return(object$family)
+    }
+    
+    # check input family object
     object <- as.character(object[1])
+    if(object == "mgaussian" | object == "mvn") object <- "multigaussian"
+    if(object == "hsvm") object <- "svm1"
+    if(object == "sqsvm") object <- "svm2"
+    families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+    object <- pmatch(object, families)
+    if(is.na(object)) stop("'object' not recognized")
+    object <- families[object]
+    
+    # create needed family info
     if(object %in% c("gaussian", "multigaussian")){
       
       famname <- object
       object <- gaussian()
       object$family <- famname
       
-    } else if(object == "hsvm"){
+    } else if(object == "svm1"){
       
       theta <- as.numeric(theta[1])
       if(theta <= 0) stop("Input 'theta' must be positive")
@@ -25,10 +42,28 @@ family.grpnet <-
         vec[idx] <- (1.0 - muy[idx])^2 / (2.0 * .Theta)
         vec[!idx] <- 1.0 - muy[!idx] - .Theta / 2.0
         vec[which(muy > 1.0)] <- 0.0
-        sum(2 * wt * vec)
+        2 * wt * vec
       }
-      object <- list(family = "hsvm",
+      object <- list(family = "svm1",
                      linkinv = function(eta) eta,
+                     dev.resids = dr)
+      
+    } else if(object == "svm2"){
+      
+      dr <- function(y, mu, wt){
+        2 * wt * pmax(0, 1 - mu * y)^2
+      }
+      object <- list(family = "svm2",
+                     linkinv = function(eta) eta,
+                     dev.resids = dr)
+      
+    } else if(object == "logit"){
+      
+      dr <- function(y, mu, wt){
+        2 * wt * log(1 + exp(-mu*y)) 
+      }
+      object <- list(family = "logit",
+                     linkinv = function(eta) {1 / (1 + exp(-eta))},
                      dev.resids = dr)
       
     } else if(object == "binomial"){

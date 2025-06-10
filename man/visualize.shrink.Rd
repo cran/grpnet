@@ -9,16 +9,16 @@ Makes a plot or returns a data frame containing the group elastic net shrinkage 
 }
 \usage{
 visualize.shrink(x = seq(-5, 5, length.out = 1001), 
-                penalty = c("LASSO", "MCP", "SCAD"), 
-                alpha = 1, 
-                lambda = 1, 
-                gamma = 4, 
-                fitted = FALSE,
-                plot = TRUE,
-                subtitle = TRUE,
-                legend = TRUE,
-                location = "top",
-                ...)
+                 penalty = c("LASSO", "MCP", "SCAD"), 
+                 alpha = 1, 
+                 lambda = 1, 
+                 gamma = 4, 
+                 fitted = FALSE,
+                 plot = TRUE,
+                 subtitle = TRUE,
+                 legend = TRUE,
+                 location = "top",
+                 ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -53,7 +53,7 @@ visualize.shrink(x = seq(-5, 5, length.out = 1001),
   the legend's location; ignored if \code{legend = FALSE}.
   }
   \item{...}{
-  addition arguments passed to \code{plot} function, e.g., \code{xlim}, \code{ylim}, etc.
+  additional arguments passed to \code{plot} function, e.g., \code{xlim}, \code{ylim}, etc.
   }
 }
 \details{
@@ -62,7 +62,6 @@ The updates for the group elastic net estimator have the form
 where \eqn{S_{\lambda_1, \lambda_2}(\cdot)} is a shrinkage and selection operator, and 
 \deqn{\mathbf{b}_{\alpha, \lambda}^{(t+1)} = \boldsymbol\beta_{\alpha, \lambda}^{(t)} + (\delta_{(t)} \epsilon)^{-1} \mathbf{g}^{(t)}}
 is the unpenalized update with \eqn{\mathbf{g}^{(t)}} denoting the current gradient.
-
 
 Note that \eqn{\lambda_1 = \lambda \alpha} is the L1 tuning parameter, \eqn{\lambda_2 = \lambda (1-\alpha)} is the L2 tuning parameter, \eqn{\delta_{(t)}} is an upper-bound on the weights appearing in the Fisher information matrix, and \eqn{\epsilon} is the largest eigenvalue of the Gramm matrix \eqn{n^{-1} \mathbf{X}^\top \mathbf{X}}. 
 }
@@ -87,6 +86,8 @@ Nathaniel E. Helwig <helwig@umn.edu>
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
+\code{\link{visualize.loss}} for plotting loss functions
+
 \code{\link{visualize.penalty}} for plotting penalty function
 }
 \examples{

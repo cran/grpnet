@@ -12,7 +12,7 @@ predict.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-17
+    # Updated: 2025-05-29
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -26,7 +26,7 @@ predict.grpnet <-
     type <- pmatch(as.character(type[1]), thetypes)
     if(is.na(type)) stop("Invalid 'type' input")
     type <- thetypes[type]
-    if(type == "class" && !(family %in% c("hsvm", "binomial", "multinomial")))
+    if(type == "class" && !(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial")))
       stop("Input 'type' can only be set to 'class' for binomial and multinomial families")
     
     
@@ -413,7 +413,7 @@ predict.grpnet <-
       if(type == "response") {
         fit <- object$family$linkinv(fit)
       } else if(type == "class"){ 
-        thresh <- ifelse(family == "hsvm", 0.0, 0.5)   # else: binomial implied
+        thresh <- ifelse(family %in% c("svm1", "svm2"), 0.0, 0.5)   # else: binomial/logit implied
         fit <- ifelse(object$family$linkinv(fit) <= thresh, object$ylev[1], object$ylev[2])
       }
       return(drop(fit))
@@ -425,7 +425,7 @@ predict.grpnet <-
       if(type == "response") {
         fit <- object$family$linkinv(fit)
       } else if(type == "class"){
-        thresh <- ifelse(family == "hsvm", 0.0, 0.5)   # else: binomial implied
+        thresh <- ifelse(family %in% c("svm1", "svm2"), 0.0, 0.5)   # else: binomial/logit implied
         fit <- ifelse(object$family$linkinv(fit) <= thresh, object$ylev[1], object$ylev[2])
       }
       return(drop(matrix(fit, nrow = nrow(newx), ncol = ns)))
@@ -465,7 +465,7 @@ predict.grpnet <-
     if(type == "response") {
       fit <- object$family$linkinv(fit)
     } else if(type == "class"){
-      thresh <- ifelse(family == "hsvm", 0.0, 0.5)   # else: binomial implied
+      thresh <- ifelse(family %in% c("svm1", "svm2"), 0.0, 0.5)   # else: binomial/logit implied
       fit <- ifelse(object$family$linkinv(fit) <= thresh, object$ylev[1], object$ylev[2])
     }
     return(drop(fit))

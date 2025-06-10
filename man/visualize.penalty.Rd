@@ -9,16 +9,16 @@ Makes a plot or returns a data frame containing the group elastic net penalty (o
 }
 \usage{
 visualize.penalty(x = seq(-5, 5, length.out = 1001), 
-                 penalty = c("LASSO", "MCP", "SCAD"), 
-                 alpha = 1, 
-                 lambda = 1, 
-                 gamma = 4, 
-                 derivative = FALSE,
-                 plot = TRUE,
-                 subtitle = TRUE,
-                 legend = TRUE,
-                 location = ifelse(derivative, "bottom", "top"),
-                 ...)
+                  penalty = c("LASSO", "MCP", "SCAD"), 
+                  alpha = 1, 
+                  lambda = 1, 
+                  gamma = 4, 
+                  derivative = FALSE,
+                  plot = TRUE,
+                  subtitle = TRUE,
+                  legend = TRUE,
+                  location = ifelse(derivative, "bottom", "top"),
+                  ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -53,7 +53,7 @@ visualize.penalty(x = seq(-5, 5, length.out = 1001),
   the legend's location; ignored if \code{legend = FALSE}.
   }
   \item{...}{
-  addition arguments passed to \code{plot} function, e.g., \code{xlim}, \code{ylim}, etc.
+  additional arguments passed to \code{plot} function, e.g., \code{xlim}, \code{ylim}, etc.
   }
 }
   
@@ -84,6 +84,8 @@ Nathaniel E. Helwig <helwig@umn.edu>
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
+\code{\link{visualize.loss}} for plotting loss functions
+
 \code{\link{visualize.shrink}} for plotting shrinkage operator
 }
 \examples{
