@@ -7,7 +7,7 @@ grpnet.default <-
            group,
            family = c("gaussian", "multigaussian", 
                       "svm1", "svm2", "logit",
-                      "binomial", "multinomial",
+                      "binomial", "multinomial", "ordinal",
                       "poisson", "negative.binomial", 
                       "Gamma", "inverse.gaussian"),
            weights = NULL,
@@ -30,7 +30,7 @@ grpnet.default <-
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-05-29
+    # Updated: 2025-08-15
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -74,7 +74,8 @@ grpnet.default <-
     if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
     if(family == "hsvm") family <- "svm1"
     if(family == "sqsvm") family <- "svm2"
-    families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+    if(family == "polr") family <- "ordinal"
+    families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "ordinal", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
     family <- pmatch(family, families)
     if(is.na(family)) stop("'family' not recognized")
     family <- families[family]
@@ -171,6 +172,12 @@ grpnet.default <-
       } else {
         stop("Invalid data input: 'y' must be a factor or matrix for when family = 'multinomial'.")
       }
+    } else if(family$family == "ordinal"){
+      y <- factor(y, ordered = TRUE)
+      ylev <- levels(y)
+      nlev <- nlevels(y)
+      y <- as.integer(y)
+      intercept <- TRUE
     } else if(family$family == "poisson") {
       y <- as.integer(y)
       if(any(y < 0)) stop("Input 'y' must contain non-negative integers when family = 'poisson'.")
@@ -815,6 +822,73 @@ grpnet.default <-
       }
       res$betas <- betas
       
+    } else if(family$family == "ordinal"){
+      
+      ## call fortran or R code
+      if(proglang == "Fortran"){
+        res <- .Fortran("grpnet_ordinal",
+                        nobs = nobs,
+                        nvars = nvars,
+                        nresp = nlev,
+                        x = x,
+                        y = y,
+                        w = weights,
+                        off = offset,
+                        ngrps = ngrps,
+                        gsize = gsize, 
+                        pw = penalty.factor,
+                        alpha = alpha,
+                        nlam = nlambda,
+                        lambda = lambda,
+                        lmr = lambda.min.ratio, 
+                        penid = penalty,
+                        gamma = gamma,
+                        eps = thresh,
+                        maxit = maxit,
+                        standardize = as.integer(standardized),
+                        intercept = as.integer(intercept),
+                        ibeta = matrix(0.0, nrow = nlev - 1L, ncol = nlambda),
+                        betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                        iters = rep(0L, nlambda),
+                        nzgrps = rep(0L, nlambda),
+                        nzcoef = rep(0L, nlambda),
+                        edfs = rep(0.0, nlambda),
+                        devs = rep(0.0, nlambda),
+                        nulldev = 0.0)
+      } else {
+        res <- R_grpnet_ordinal(nobs = nobs,
+                                nvars = nvars,
+                                nresp = nlev,
+                                x = x,
+                                y = y,
+                                w = weights,
+                                off = offset,
+                                ngrps = ngrps,
+                                gsize = gsize, 
+                                pw = penalty.factor,
+                                alpha = alpha,
+                                nlam = nlambda,
+                                lambda = lambda,
+                                lmr = lambda.min.ratio, 
+                                penid = penalty,
+                                gamma = gamma,
+                                eps = thresh,
+                                maxit = maxit,
+                                standardize = as.integer(standardized),
+                                intercept = as.integer(intercept),
+                                ibeta = matrix(0.0, nrow = nlev - 1L, ncol = nlambda),
+                                betas = matrix(0.0, nrow = nvars, ncol = nlambda),
+                                iters = rep(0L, nlambda),
+                                nzgrps = rep(0L, nlambda),
+                                nzcoef = rep(0L, nlambda),
+                                edfs = rep(0.0, nlambda),
+                                devs = rep(0.0, nlambda),
+                                nulldev = 0.0)
+      } # end if(proglang == "Fortran")
+      
+      rownames(res$ibeta) <- paste0("y>=", ylev[-1])
+      colnames(res$ibeta) <- paste0("s", 1:nlambda)
+      
     } else if(family$family == "poisson"){
     
       ## call fortran or R code
@@ -1142,11 +1216,11 @@ grpnet.default <-
     
     ## intercept
     if(intercept){
-      ingroup <- c(0, ingroup)
+      ingroup <- c(rep(0, ifelse(family$family == "ordinal", nlev-1, 1)), ingroup)
       ngrps <- ngrps + 1L
       thenames <- names(res$pw)
       res$pw <- c(0, res$pw)
-      names(res$pw) <- c("(Intercept)", thenames)
+      names(res$pw) <- c("(Intercept)", thenames) 
     }
     
     ## end clock

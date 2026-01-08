@@ -2,7 +2,7 @@ family.grpnet <-
   function(object, theta = 1){
     # prepare family for grpnet
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-06-03
+    # Updated: 2025-08-15
     
     # check class of object
     if(inherits(object, "cv.grpnet")){
@@ -16,7 +16,8 @@ family.grpnet <-
     if(object == "mgaussian" | object == "mvn") object <- "multigaussian"
     if(object == "hsvm") object <- "svm1"
     if(object == "sqsvm") object <- "svm2"
-    families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+    if(object == "polr") object <- "ordinal"
+    families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "ordinal", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
     object <- pmatch(object, families)
     if(is.na(object)) stop("'object' not recognized")
     object <- families[object]
@@ -98,6 +99,17 @@ family.grpnet <-
       }
       object <- list(family = "multinomial",
                      linkinv = il,
+                     dev.resids = dr)
+      
+    } else if(object == "ordinal"){
+      
+      dr <- function(y, mu, wt){
+        mu[mu < 0.000001] <- 0.000001
+        mu[mu > 0.999999] <- 0.999999
+        -2 * wt * log(mu)
+      }
+      object <- list(family = "ordinal",
+                     linkinv = function(eta) {1 / (1 + exp(-eta))},
                      dev.resids = dr)
       
     } else if(object == "poisson"){

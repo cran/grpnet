@@ -21,7 +21,7 @@ cv.grpnet.default <-
            ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-05-29
+    # Updated: 2025-12-12
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -69,7 +69,8 @@ cv.grpnet.default <-
       if(family == "mgaussian" | family == "mvn") family <- "multigaussian"
       if(family == "hsvm") family <- "svm1"
       if(family == "sqsvm") family <- "svm2"
-      families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
+      if(family == "polr") family <- "ordinal"
+      families <- c("gaussian", "multigaussian", "svm1", "svm2", "logit", "binomial", "multinomial", "ordinal", "poisson", "negative.binomial", "Gamma", "inverse.gaussian")
       family <- pmatch(family, families)
       if(is.na(family)) stop("'family' not recognized")
       family <- families[family]
@@ -166,6 +167,13 @@ cv.grpnet.default <-
       } else {
         stop("Invalid data input: 'y' must be a factor or matrix for when family = 'multinomial'.")
       }
+    } else if(family == "ordinal"){
+      y <- yfac <- factor(y, ordered = TRUE)
+      ylev <- levels(y)
+      nlev <- nlevels(y)
+      y <- as.integer(y)
+      ymat <- outer(y, 1:nlev, FUN = "==") + 0.0
+      intercept <- TRUE
     } else if (family == "poisson") {
       y <- as.integer(y)
       if(any(y < 0)) stop("Input 'y' must contain non-negative integers when family = 'poisson'.")
@@ -247,20 +255,35 @@ cv.grpnet.default <-
     
     ### check type.measure
     if(is.null(type.measure)){
-      type.measure <- ifelse(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial"), "class", "mae")
+      type.measure <- ifelse(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial", "ordinal"), "class", "mae")
     } else {
       type.measure <- pmatch(as.character(type.measure[1]), c("deviance", "mse", "mae", "class"))
       if(is.na(type.measure)) stop("Invalid 'type.measure' argument.")
       type.measure <- c("deviance", "mse", "mae", "class")[type.measure]
-      if(type.measure == "class" && !(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial")))
-        stop("Input 'type.measure' can only be 'class' for binomial and multinomial family")
+      if(type.measure == "class" && !(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial", "ordinal")))
+        stop("Input 'type.measure' can only be set to 'class' for families:\nsvm1, svm2, logit, binomial, multinomial, ordinal")
     }
     
     ### check nfolds and foldid
     if(is.null(foldid)){
       nfolds <- as.integer(nfolds[1])
       if(nfolds < 2L | nfolds > nobs) stop("Input 'nfolds' must satisfy:  2 <= nfolds <= nrow(x)")
-      foldid <- sample(rep(1:nfolds, length.out = nobs))
+      if(family == "ordinal"){
+        ytab <- table(yfac)
+        if(min(ytab) == 1L) stop("When family = 'oridinal', response must satisfy:  min(table(as.ordered(y))) > 1")
+        foldid <- rep(NA, nobs)
+        for(k in 1:nlev){
+          kid <- which(yfac == ylev[k])
+          nkid <- length(kid)
+          if(nkid < nfolds){
+            foldid[kid] <- sample.int(nfolds, nkid)
+          } else {
+            foldid[kid] <- sample(rep(1:nfolds, length.out = nkid))
+          } # end if(nkid == 1L)
+        } # end for(k in 1:nlev)
+      } else {
+        foldid <- sample(rep(1:nfolds, length.out = nobs))
+      }
     } else {
       foldid <- as.integer(foldid)
       if(length(foldid) != nobs) stop("Input 'foldid' must satisfy:  length(y) == length(foldid)")
@@ -307,7 +330,7 @@ cv.grpnet.default <-
       ### ridge fit
       mod <- cv.grpnet.default(x = x, 
                                y = y, 
-                               group = group,
+                               group = ingroup,
                                weights = weights,
                                offset = offset,
                                alpha = 0,
@@ -341,7 +364,7 @@ cv.grpnet.default <-
       ### refit with updated penalty weights
       mod <- cv.grpnet.default(x = x, 
                                y = y, 
-                               group = group,
+                               group = ingroup,
                                weights = weights,
                                offset = offset,
                                alpha = alpha,
@@ -394,7 +417,7 @@ cv.grpnet.default <-
           # fit model
           res <- cv.grpnet.default(x = x, 
                                    y = y,
-                                   group = group,
+                                   group = ingroup,
                                    weights = weights,
                                    offset = offset,
                                    alpha = alpha[j],
@@ -459,7 +482,7 @@ cv.grpnet.default <-
                          gamma = gamma, 
                          ...)
     if(grpnet.fit$args$intercept){
-      grpnet.fit$group <- c(0, ingroup)
+      grpnet.fit$group <- c(rep(0, ifelse(family == "ordinal", nlev-1, 1)), ingroup)
     } else{
       grpnet.fit$group <- ingroup
     }
@@ -760,6 +783,139 @@ cv.grpnet.default <-
         } # end for(k in 1:nfolds)
         if(verbose) close(pbar)
         
+      } # end if(parallel)
+      
+    } else if(family == "ordinal"){
+      
+      if(parallel){
+        
+        # define parcvloss function
+        parcvloss <- 
+          function(testid, xmat, ymat, group, family, weights, offset, alpha, 
+                   nlambda, lambda.min.ratio, lambda, penalty.factor, penalty, 
+                   gamma, theta, standardized, orthogonalized, intercept, 
+                   thresh, maxit, proglang, type.measure, same.lambda, yfac, yrowsum){
+            temp <- grpnet(x = xmat[-testid,,drop=FALSE], 
+                           y = yfac[-testid], 
+                           group = group, 
+                           family = family,
+                           weights = weights[-testid], 
+                           offset = offset[-testid],
+                           alpha = alpha,
+                           nlambda = nlambda,
+                           lambda.min.ratio = lambda.min.ratio,
+                           lambda = if(same.lambda) lambda else NULL,
+                           penalty.factor = penalty.factor,
+                           penalty = penalty,
+                           gamma = gamma,
+                           theta = theta, 
+                           standardized = standardized,
+                           orthogonalized = orthogonalized,
+                           intercept = intercept,
+                           thresh = thresh,
+                           maxit = maxit,
+                           proglang = proglang)
+            temp$ylev <- levels(yfac)
+            nlev <- length(temp$ylev)
+            mu <- predict(temp, newx = xmat[testid,,drop=FALSE], 
+                          s = if(same.lambda) NULL else lambda,
+                          type = ifelse(type.measure == "class", "class", "response"))
+            if(type.measure == "class"){
+              cvloss <- 1 - colMeans(yfac[testid] == mu)
+            } else {
+              cvloss <- rep(0.0, nlambda)
+              for(i in 1:nlambda){
+                mui <- cbind(1, mu[,,i])
+                mui <- cbind(mui[,1:(nlev-1)] - mui[,2:nlev], mui[,nlev])
+                if(type.measure == "deviance"){
+                  mu0 <- rowSums(ymat[testid,,drop=FALSE] * mui)
+                  cvloss[i] <- mean(grpnet.fit$family$dev.resids(yfac[testid], mu0, weights[testid]))
+                } else if(type.measure == "mse"){
+                  cvloss[i] <- mean((ymat[testid,,drop=FALSE] - mui)^2)
+                } else if(type.measure == "mae"){
+                  cvloss[i] <- mean(abs(ymat[testid,,drop=FALSE] - mui))
+                }
+              } # end for(i in 1:nlambda)
+            } # end if(type.measure == "class")
+            return(cvloss)
+          } # end parcvloss
+        
+        # evaluate cvloss in parallel
+        cvloss <- parallel::parSapply(cl = cluster, X = fid, FUN = parcvloss,
+                                      xmat = x,
+                                      ymat = ymat,
+                                      group = group,
+                                      family = family,
+                                      weights = weights,
+                                      offset = offset,
+                                      alpha = grpnet.fit$alpha,
+                                      nlambda = nlambda,
+                                      lambda.min.ratio = lambda[nlambda] / lambda[1],
+                                      lambda = lambda,
+                                      penalty.factor = grpnet.fit$args$penalty.factor,
+                                      penalty = grpnet.fit$args$penalty,
+                                      gamma = grpnet.fit$args$gamma,
+                                      theta = grpnet.fit$args$theta,
+                                      standardized = grpnet.fit$args$standardized,
+                                      orthogonalized = grpnet.fit$args$orthogonalized,
+                                      intercept = grpnet.fit$args$intercept,
+                                      thresh = grpnet.fit$args$thresh,
+                                      maxit = grpnet.fit$args$maxit,
+                                      proglang = grpnet.fit$args$proglang,
+                                      type.measure = type.measure,
+                                      same.lambda = same.lambda,
+                                      yfac = yfac)
+        
+        # unvectorize
+        cvloss <- matrix(cvloss, nrow = nlambda, ncol = nfolds)
+        
+      } else {
+        for(k in 1:nfolds){
+          if(same.lambda){
+            temp <- grpnet(x = x[-fid[[k]],,drop=FALSE],
+                           y = y[-fid[[k]]],
+                           group = group,
+                           weights = weights[-fid[[k]]],
+                           offset = offset[-fid[[k]]],
+                           alpha = alpha,
+                           lambda = lambda, 
+                           gamma = gamma, 
+                           ...)
+            temp$ylev <- ylev    # correct levels for classification loss
+            mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE],
+                          type = ifelse(type.measure == "class", "class", "response"))
+          } else {
+            temp <- grpnet(x = x[-fid[[k]],,drop=FALSE],
+                           y = y[-fid[[k]]],
+                           group = group,
+                           weights = weights[-fid[[k]]],
+                           offset = offset[-fid[[k]]], 
+                           alpha = alpha,
+                           gamma = gamma,
+                           ...)
+            temp$ylev <- ylev    # correct levels for classification loss
+            mu <- predict(temp, newx = x[fid[[k]],,drop=FALSE], s = lambda,
+                          type = ifelse(type.measure == "class", "class", "response"))
+          } # end if(same.lambda)
+          if(type.measure == "class"){
+            cvloss[,k] <- 1 - colMeans(yfac[fid[[k]]] == mu)
+          } else {
+            for(i in 1:nlambda){
+              mui <- cbind(1, mu[,,i])
+              mui <- cbind(mui[,1:(nlev-1)] - mui[,2:nlev], mui[,nlev])
+              if(type.measure == "deviance"){
+                mu0 <- rowSums(ymat[fid[[k]],,drop=FALSE] * mui)
+                cvloss[i,k] <- mean(grpnet.fit$family$dev.resids(y[fid[[k]]], mu0, weights[fid[[k]]]))
+              } else if(type.measure == "mse"){
+                cvloss[i,k] <- mean((ymat[fid[[k]],,drop=FALSE] - mui)^2)
+              } else if(type.measure == "mae"){
+                cvloss[i,k] <- mean(abs(ymat[fid[[k]],,drop=FALSE] - mui))
+              }
+            } # end for(i in 1:nlambda)
+          } # end # end if(type.measure == "class")
+          if(verbose) setTxtProgressBar(pbar, k + 1)
+        } # end for(k in 1:nfolds)
+        if(verbose) close(pbar)
       } # end if(parallel)
       
     } else {

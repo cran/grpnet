@@ -130,16 +130,126 @@ mod <- grpnet(mpg ~ ., data = auto)
 fit.path <- predict(mod, newdata = auto)
 
 # get fitted values at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, s = c(1.5, 1, 0.5))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, s = lam)
 
 # compare rmse for solutions
 rmse.path <- sqrt(colMeans((auto$mpg - fit.path)^2))
 rmse.some <- sqrt(colMeans((auto$mpg - fit.some)^2))
 plot(log(mod$lambda), rmse.path, cex = 0.5)
-points(log(c(1.5, 1, 0.5)), rmse.some, pch = 0, col = "red")
+points(log(lam), rmse.some, pch = 0, col = "red")
 
 
 \donttest{
+######***######   family = "multigaussian"   ######***######
+
+# load data
+data(auto)
+
+# fit model (formula method, response = (mpg, displacement))
+y <- as.matrix(auto[,c(1,3)])
+mod <- grpnet(y ~ ., data = auto[,-c(1,3)], family = "multigaussian",
+              standardize.response = TRUE)
+
+# get fitted values for regularization path (output = 392 x 2 x 100 array)
+fit.path <- predict(mod, newdata = auto)
+
+# get fitted values at 3 particular points (output = 392 x 2 x 3 array)
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, s = lam)
+
+# compare rmse for solutions (mpg)
+rmse1.path <- sqrt(colMeans((y[,1] - fit.path[,1,])^2))
+rmse1.some <- sqrt(colMeans((y[,1] - fit.some[,1,])^2))
+plot(log(mod$lambda), rmse1.path, cex = 0.5)
+points(log(lam), rmse1.some, pch = 0, col = "red")
+
+# compare rmse for solutions (displacement)
+rmse2.path <- sqrt(colMeans((y[,2] - fit.path[,2,])^2))
+rmse2.some <- sqrt(colMeans((y[,2] - fit.some[,2,])^2))
+plot(log(mod$lambda), rmse2.path, cex = 0.5)
+points(log(lam), rmse2.some, pch = 0, col = "red")
+
+
+
+######***######   family = "svm1"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "svm1")
+
+# get predicted classes for regularization path (output = 392 x 100 matrix)
+fit.path <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at 3 particular points (output = 392 x 3 matrix)
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "class", s = lam)
+
+# compare misclassification rate for solutions
+miss.path <- 1 - colMeans(auto$origin == fit.path)
+miss.some <- 1 - colMeans(auto$origin == fit.some)
+plot(log(mod$lambda), miss.path, cex = 0.5)
+points(log(lam), miss.some, pch = 0, col = "red")
+
+
+
+######***######   family = "svm2"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "svm2")
+
+# get predicted classes for regularization path (output = 392 x 100 matrix)
+fit.path <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at 3 particular points (output = 392 x 3 matrix)
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "class", s = lam)
+
+# compare misclassification rate for solutions
+miss.path <- 1 - colMeans(auto$origin == fit.path)
+miss.some <- 1 - colMeans(auto$origin == fit.some)
+plot(log(mod$lambda), miss.path, cex = 0.5)
+points(log(lam), miss.some, pch = 0, col = "red")
+
+
+
+######***######   family = "logit"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+mod <- grpnet(origin ~ ., data = auto, family = "logit")
+
+# get predicted classes for regularization path (output = 392 x 100 matrix)
+fit.path <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at 3 particular points (output = 392 x 3 matrix)
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "class", s = lam)
+
+# compare misclassification rate for solutions
+miss.path <- 1 - colMeans(auto$origin == fit.path)
+miss.some <- 1 - colMeans(auto$origin == fit.some)
+plot(log(mod$lambda), miss.path, cex = 0.5)
+points(log(lam), miss.some, pch = 0, col = "red")
+
+
+
 ######***######   family = "binomial"   ######***######
 
 # load data
@@ -155,13 +265,14 @@ mod <- grpnet(origin ~ ., data = auto, family = "binomial")
 fit.path <- predict(mod, newdata = auto, type = "class")
 
 # get predicted classes at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, type = "class", s = c(.15, .1, .05))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "class", s = lam)
 
 # compare misclassification rate for solutions
 miss.path <- 1 - colMeans(auto$origin == fit.path)
 miss.some <- 1 - colMeans(auto$origin == fit.some)
 plot(log(mod$lambda), miss.path, cex = 0.5)
-points(log(c(.15, .1, .05)), miss.some, pch = 0, col = "red")
+points(log(lam), miss.some, pch = 0, col = "red")
 
 
 
@@ -177,13 +288,37 @@ mod <- grpnet(origin ~ ., data = auto, family = "multinomial")
 fit.path <- predict(mod, newdata = auto, type = "class")
 
 # get predicted classes at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, type = "class", s = c(.1, .01, .001))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "class", s = lam)
 
 # compare misclassification rate for solutions
 miss.path <- 1 - colMeans(auto$origin == fit.path)
 miss.some <- 1 - colMeans(auto$origin == fit.some)
 plot(log(mod$lambda), miss.path, cex = 0.5)
-points(log(c(.1, .01, .001)), miss.some, pch = 0, col = "red")
+points(log(lam), miss.some, pch = 0, col = "red")
+
+
+
+######***######   family = "ordinal"   ######***######
+
+# load data
+data(auto)
+
+# fit model (formula method, response = cylinders with 5 levels)
+mod <- grpnet(cylinders ~ ., data = auto, family = "ordinal")
+
+# get fitted values for regularization path (output = 392 x 100 matrix)
+fit.path <- predict(mod, newdata = auto, type = "class")
+
+# get fitted values at 3 particular points (output = 392 x 3 matrix)
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "class", s = lam)
+
+# compare misclassification rate for solutions
+miss.path <- 1 - colMeans(auto$cylinders == fit.path)
+miss.some <- 1 - colMeans(auto$cylinders == fit.some)
+plot(log(mod$lambda), miss.path, cex = 0.5)
+points(log(lam), miss.some, pch = 0, col = "red")
 
 
 
@@ -199,13 +334,14 @@ mod <- grpnet(horsepower ~ ., data = auto, family = "poisson")
 fit.path <- predict(mod, newdata = auto, type = "response")
 
 # get fitted values at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, type = "response", s = c(15, 10, 5))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "response", s = lam)
 
 # compare rmse for solutions
 rmse.path <- sqrt(colMeans((auto$horsepower - fit.path)^2))
 rmse.some <- sqrt(colMeans((auto$horsepower - fit.some)^2))
 plot(log(mod$lambda), rmse.path, cex = 0.5)
-points(log(c(15, 10, 5)), rmse.some, pch = 0, col = "red")
+points(log(lam), rmse.some, pch = 0, col = "red")
 
 
 
@@ -221,13 +357,14 @@ mod <- grpnet(horsepower ~ ., data = auto, family = "negative.binomial")
 fit.path <- predict(mod, newdata = auto, type = "response")
 
 # get fitted values at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, type = "response", s = c(0.1, 0.01, 0.001))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "response", s = lam)
 
 # compare rmse for solutions
 rmse.path <- sqrt(colMeans((auto$horsepower - fit.path)^2))
 rmse.some <- sqrt(colMeans((auto$horsepower - fit.some)^2))
 plot(log(mod$lambda), rmse.path, cex = 0.5)
-points(log(c(0.1, 0.01, 0.001)), rmse.some, pch = 0, col = "red")
+points(log(lam), rmse.some, pch = 0, col = "red")
 
 
 
@@ -243,13 +380,14 @@ mod <- grpnet(mpg ~ ., data = auto, family = "Gamma")
 fit.path <- predict(mod, newdata = auto, type = "response")
 
 # get fitted values at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, type = "response", s = c(0.1, 0.01, 0.001))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "response", s = lam)
 
 # compare rmse for solutions
 rmse.path <- sqrt(colMeans((auto$mpg - fit.path)^2))
 rmse.some <- sqrt(colMeans((auto$mpg - fit.some)^2))
 plot(log(mod$lambda), rmse.path, cex = 0.5)
-points(log(c(0.1, 0.01, 0.001)), rmse.some, pch = 0, col = "red")
+points(log(lam), rmse.some, pch = 0, col = "red")
 
 
 
@@ -265,13 +403,14 @@ mod <- grpnet(mpg ~ ., data = auto, family = "inverse.gaussian")
 fit.path <- predict(mod, newdata = auto, type = "response")
 
 # get fitted values at 3 particular points (output = 392 x 3 matrix)
-fit.some <- predict(mod, newdata = auto, type = "response", s = c(0.005, 0.001, 0.0001))
+lam <- quantile(mod$lambda, probs = c(0.25, 0.5, 0.75))
+fit.some <- predict(mod, newdata = auto, type = "response", s = lam)
 
 # compare rmse for solutions
 rmse.path <- sqrt(colMeans((auto$mpg - fit.path)^2))
 rmse.some <- sqrt(colMeans((auto$mpg - fit.some)^2))
 plot(log(mod$lambda), rmse.path, cex = 0.5)
-points(log(c(0.005, 0.001, 0.0001)), rmse.some, pch = 0, col = "red")
+points(log(lam), rmse.some, pch = 0, col = "red")
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

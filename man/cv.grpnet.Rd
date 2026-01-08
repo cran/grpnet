@@ -307,6 +307,23 @@ plot(mod)
 
 
 
+######***######   family = "ordinal"   ######***######
+
+# load data
+data(auto)
+
+# 10-fold cv (formula method, response = cylinders with 5 levels)
+set.seed(1)
+mod <- cv.grpnet(cylinders ~ ., data = auto, family = "ordinal")
+
+# print min and 1se solution info
+mod
+
+# plot cv error curve
+plot(mod)
+
+
+
 ######***######   family = "poisson"   ######***######
 
 # load data

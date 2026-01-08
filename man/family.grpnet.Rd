@@ -25,10 +25,11 @@ negative.binomial: size parameter such that the variance function is defined as 
 \details{
 There is only one available link function for each \code{family}: \cr
 * gaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
-* multigaussian (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
+* multigaussian (identity): \eqn{\mu_\ell = \mathbf{X}^\top \boldsymbol\beta_\ell} \cr
 * svm1/svm2 (identity): \eqn{\mu = \mathbf{X}^\top \boldsymbol\beta} \cr
 * binomial/logit (logit): \eqn{\log(\frac{\pi}{1 - \pi}) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * multinomial (symmetric): \eqn{\pi_\ell = \frac{\exp(\mathbf{X}^\top \boldsymbol\beta_\ell)}{\sum_{l = 1}^m \exp(\mathbf{X}^\top \boldsymbol\beta_l)}} \cr
+* ordinal (logit): \eqn{\log(\frac{\Pi_\ell}{1 - \Pi_\ell}) = \alpha_\ell + \mathbf{X}^\top \boldsymbol\beta} \cr
 * poisson (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * negative.binomial (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
 * Gamma (log): \eqn{\log(\mu) = \mathbf{X}^\top \boldsymbol\beta} \cr
@@ -67,8 +68,15 @@ For \code{svm2} family, the squared hinge loss is defined as
 \end{array} \right.
 }
 where \eqn{z = Y \eta} with \eqn{Y \in \{-1,1\}} denoting the response and \eqn{\eta = \mathbf{X}^\top \boldsymbol\beta} denoting the linear predictor. Note that the \code{svm1} loss function approaches the support vector machine (i.e., hinge) loss function as \eqn{\theta \rightarrow 0}.
-}
 
+
+For \code{ordinal} family, a cumulative link model is used, i.e.,
+\deqn{
+\log(\frac{\Pi_\ell}{1 - \Pi_\ell}) = \alpha_\ell + \mathbf{X}^\top \boldsymbol\beta
+}
+where \eqn{\Pi_\ell = P(Y \geq y_\ell)} is the probabilty that the response exceeds the \eqn{\ell}-th ordered response category for \eqn{\ell = 2,\ldots,m}.
+
+}
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
@@ -92,6 +100,8 @@ family.grpnet("logit")
 family.grpnet("binomial")
 
 family.grpnet("multinomial")
+
+family.grpnet("ordinal")
 
 family.grpnet("poisson")
 

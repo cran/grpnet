@@ -29,6 +29,8 @@ extern void F77_NAME(grpnet_multinom)(void *, void *, void *, void *, void *, vo
 extern void F77_NAME(grpnet_multinom_dev)(void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_negbin)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_negbin_dev)(void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_ordinal)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
+extern void F77_NAME(grpnet_ordinal_int)(void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_penalty)(void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_poisson)(void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *, void *);
 extern void F77_NAME(grpnet_poisson_dev)(void *, void *, void *, void *, void *);
@@ -54,6 +56,8 @@ static const R_FortranMethodDef FortranEntries[] = {
     {"grpnet_multinom_dev",  (DL_FUNC) &F77_NAME(grpnet_multinom_dev),  6},
     {"grpnet_negbin",  (DL_FUNC) &F77_NAME(grpnet_negbin),  28},
     {"grpnet_negbin_dev",  (DL_FUNC) &F77_NAME(grpnet_negbin_dev),  6},
+    {"grpnet_ordinal", (DL_FUNC) &F77_NAME(grpnet_ordinal), 28},
+    {"grpnet_ordinal_int", (DL_FUNC) &F77_NAME(grpnet_ordinal_int), 8},
     {"grpnet_penalty",  (DL_FUNC) &F77_NAME(grpnet_penalty),  6},
     {"grpnet_poisson",  (DL_FUNC) &F77_NAME(grpnet_poisson),  27},
     {"grpnet_poisson_dev",  (DL_FUNC) &F77_NAME(grpnet_poisson_dev),  5},

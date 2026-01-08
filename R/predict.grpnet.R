@@ -12,7 +12,7 @@ predict.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-05-29
+    # Updated: 2025-12-11
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -26,8 +26,8 @@ predict.grpnet <-
     type <- pmatch(as.character(type[1]), thetypes)
     if(is.na(type)) stop("Invalid 'type' input")
     type <- thetypes[type]
-    if(type == "class" && !(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial")))
-      stop("Input 'type' can only be set to 'class' for binomial and multinomial families")
+    if(type == "class" && !(family %in% c("svm1", "svm2", "logit", "binomial", "multinomial", "ordinal")))
+      stop("Input 'type' can only be set to 'class' for families:\nsvm1, svm2, logit, binomial, multinomial, ordinal")
     
     
     
@@ -182,7 +182,10 @@ predict.grpnet <-
         int <- 1L
         gnames <- gnames[-1]
         ngroups <- ngroups - 1L
-        group <- group[-1]
+        if(object$family$family == "ordinal"){
+          int <- length(object$ylev) - 1L
+        }
+        group <- group[-c(1:int)]
       }
       
       ### multinomial or other?
@@ -263,12 +266,14 @@ predict.grpnet <-
           if(ns == 1L){
             etai <- scale(terms[[j]], scale = FALSE)
             eta0 <- rowSums(etai)
-            imp[[j]] <- colSums(etai * eta0) / sum(eta0^2)
+            sst0 <- sum(eta0^2)
+            imp[[j]] <- colSums(etai * eta0) / ifelse(sst0 > 0, sst0, 1)
           } else {
             for(i in 1:ns){
               etai <- scale(terms[[j]][,,i], scale = FALSE)
               eta0 <- rowSums(etai)
-              imp[[j]][,i] <- colSums(etai * eta0) / sum(eta0^2)
+              sst0 <- sum(eta0^2)
+              imp[[j]][,i] <- colSums(etai * eta0) / ifelse(sst0 > 0, sst0, 1)
             } 
           } # end if(ns == 1L)
           
@@ -295,12 +300,14 @@ predict.grpnet <-
         if(ns == 1L){
           etai <- scale(terms, scale = FALSE)
           eta0 <- rowSums(etai)
-          imp <- colSums(etai * eta0) / sum(eta0^2)
+          sst0 <- sum(eta0^2)
+          imp <- colSums(etai * eta0) / ifelse(sst0 > 0, sst0, 1)
         } else {
           for(i in 1:ns){
             etai <- scale(terms[,,i], scale = FALSE)
             eta0 <- rowSums(etai)
-            imp[,i] <- colSums(etai * eta0) / sum(eta0^2)
+            sst0 <- sum(eta0^2)
+            imp[,i] <- colSums(etai * eta0) / ifelse(sst0 > 0, sst0, 1)
           } 
         } # end if(ns == 1L)
         
@@ -399,6 +406,125 @@ predict.grpnet <-
       
     } # end if(object$family$family == "multinomial")
     
+    
+    
+    ######***######   ORDINAL   ######***######
+    if(family == "ordinal"){
+      
+      nlev <- length(object$ylev)
+      eta <- newx %*% object$beta
+      
+      ### predictions at object$lambda are easy...
+      if(!newlambdas){
+        if(nlam == 1L){
+          fit <- matrix(eta, nrow = nobs, ncol = nlev - 1)
+          rownames(fit) <- 1:nobs
+          colnames(fit) <- paste0("y>=", object$ylev[-1])
+          for(k in 1:(nlev - 1)) fit[,k] <- fit[,k] + object$a0[k]
+          if(type == "response"){
+            fit <- object$family$linkinv(fit)
+          } else if(type == "class"){
+            fit <- object$family$linkinv(fit)
+            yc <- rep(NA, nobs)
+            mu <- cbind(1, fit)
+            mu <- cbind(mu[,1:(nlev-1)] - mu[,2:nlev], mu[,nlev])
+            fit <- object$ylev[apply(mu, 1, which.max)]
+          }
+        } else {
+          fit <- array(dim = c(nobs, nlev - 1, nlam))
+          dimnames(fit) <- list(1:nobs, 
+                                paste0("y>=", object$ylev[-1]), 
+                                paste0("s", 1:length(object$lambda)))
+          for(k in 1:(nlev - 1)) fit[,k,] <- eta + matrix(object$a0[k,], nrow = nobs, ncol = nlam, byrow = TRUE)
+          if(type == "response"){
+            fit <- object$family$linkinv(fit)
+          } else if(type == "class"){
+            fit <- object$family$linkinv(fit)
+            yc <- matrix(NA, nrow = nobs, ncol = nlam)
+            colnames(yc) <- paste0("s", 1:nlam)
+            for(i in 1:nlam){
+              mu <- cbind(1, fit[,,i])
+              mu <- cbind(mu[,1:(nlev-1)] - mu[,2:nlev], mu[,nlev])
+              yc[,i] <- object$ylev[apply(mu, 1, which.max)]
+            }
+            fit <- yc
+          }
+        } # end if(nlam == 1L)
+        return(drop(fit))
+      }
+      
+      ### only 1 fit lambda?
+      if(nlam == 1L){
+        fit <- matrix(eta, nrow = nobs, ncol = nlev - 1)
+        rownames(fit) <- 1:nobs
+        colnames(fit) <- paste0("y>=", object$ylev[-1])
+        for(k in 1:(nlev - 1)) fit[,k] <- fit[,k] + object$a0[k]
+        if(type == "response") {
+          fit <- object$family$linkinv(fit)
+        } else if(type == "class"){
+          fit <- object$family$linkinv(fit)
+          yc <- rep(NA, nobs)
+          mu <- cbind(1, fit)
+          mu <- cbind(mu[,1:(nlev-1)] - mu[,2:nlev], mu[,nlev])
+          fit <- object$ylev[apply(mu, 1, which.max)]
+        }
+        return(drop(matrix(fit, nrow = nrow(newx), ncol = ns)))
+      }
+      
+      ### min and max lambda from fit model
+      lambda.max <- max(object$lambda)
+      lambda.min <- min(object$lambda)
+      
+      ### transform lambda (and s) to the [0,1] interval
+      sfrac <- (lambda.max - s) / (lambda.max - lambda.min)
+      lambda <- (lambda.max - object$lambda) / (lambda.max - lambda.min)
+      
+      ### correct for out-of-range s values
+      sfrac[sfrac > max(lambda)] <- max(lambda)
+      sfrac[sfrac < min(lambda)] <- min(lambda)
+      
+      ### linear interpolation at sfrac
+      interp <- approx(x = lambda, y = seq(lambda), xout = sfrac)$y
+      
+      ### L and R indices
+      left <- floor(interp)
+      right <- ceiling(interp)
+      
+      ### update sfrac w.r.t. L and R indices
+      sfrac <- (sfrac - lambda[right]) / (lambda[left] - lambda[right])
+      sfrac[left == right] <- 1
+      sfrac[abs(lambda[left] - lambda[right]) < .Machine$double.eps] <- 1
+      
+      ### interpolate...
+      coefs <- rbind(object$a0, object$beta)
+      coefs <- coefs[, left, drop=FALSE] %*% diag(sfrac, nrow = ns, ncol = ns) + coefs[, right, drop=FALSE] %*% diag(1 - sfrac, nrow = ns, ncol = ns)
+      colnames(coefs) <- paste0("s", 1:ns)
+      
+      ### return fitted values
+      shiftid <- 1:(nlev - 1L)
+      object$a0 <- coefs[shiftid,,drop=FALSE]
+      object$beta <- coefs[-shiftid,,drop=FALSE]
+      eta <- newx %*% object$beta
+      fit <- array(dim = c(nobs, nlev - 1, ns))
+      dimnames(fit) <- list(1:nobs, 
+                            paste0("y>=", object$ylev[-1]), 
+                            paste0("s", 1:ns))
+      for(k in 1:(nlev - 1)) fit[,k,] <- eta + matrix(object$a0[k,], nrow = nobs, ncol = ns, byrow = TRUE)
+      if(type == "response"){
+        fit <- object$family$linkinv(fit)
+      } else if(type == "class"){
+        fit <- object$family$linkinv(fit)
+        yc <- matrix(NA, nrow = nobs, ncol = ns)
+        colnames(yc) <- paste0("s", 1:ns)
+        for(i in 1:ns){
+          mu <- cbind(1, fit[,,i])
+          mu <- cbind(mu[,1:(nlev-1)] - mu[,2:nlev], mu[,nlev])
+          yc[,i] <- object$ylev[apply(mu, 1, which.max)]
+        }
+        fit <- yc
+      }
+      return(drop(fit))
+    } # end if(family == "ordinal")
     
     
     ######***######   OTHER FAMILIES   ######***######

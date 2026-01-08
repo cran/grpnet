@@ -7,7 +7,7 @@ coef.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-04-23
+    # Updated: 2025-11-07
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -117,11 +117,19 @@ coef.grpnet <-
     if(!newlambdas){
       if(nlam == 1L){
         coefs <- matrix(c(object$a0, object$beta), ncol = 1)
-        rownames(coefs) <- c("(Intercept)", names(object$beta))
+        if(object$family$family == "ordinal"){
+          rownames(coefs) <- c(paste0("y>=", object$ylev[-1]), names(object$beta))
+        } else {
+          rownames(coefs) <- c("(Intercept)", names(object$beta))
+        }
         colnames(coefs) <- "s1"
       } else {
         coefs <- rbind(object$a0, object$beta)
-        rownames(coefs) <- c("(Intercept)", rownames(object$beta))
+        if(object$family$family == "ordinal"){
+          rownames(coefs) <- c(paste0("y>=", object$ylev[-1]), rownames(object$beta))
+        } else {
+          rownames(coefs) <- c("(Intercept)", rownames(object$beta))
+        }
         colnames(coefs) <- colnames(object$beta)
       }
       class(coefs) <- "coef.grpnet"
@@ -130,8 +138,12 @@ coef.grpnet <-
     
     ### only 1 fit lambda?
     if(nlam == 1L){
-      coefs <- matrix(c(object$a0, object$beta), nrow = length(object$beta) + 1, ncol = ns)
-      rownames(coefs) <- c("(Intercept)", names(object$beta))
+      coefs <- matrix(c(object$a0, object$beta), nrow = length(object$beta) + length(object$a0), ncol = ns)
+      if(object$family$family == "ordinal"){
+        rownames(coefs) <- c(paste0("y>=", object$ylev[-1]), names(object$beta))
+      } else {
+        rownames(coefs) <- c("(Intercept)", names(object$beta))
+      }
       colnames(coefs) <- rep("s1", ns)
       class(coefs) <- "coef.grpnet"
       return(coefs)
@@ -164,7 +176,12 @@ coef.grpnet <-
     ### interpolate...
     coefs <- rbind(object$a0, object$beta)
     coefs <- coefs[, left, drop=FALSE] %*% diag(sfrac, nrow = ns, ncol = ns) + coefs[, right, drop=FALSE] %*% diag(1 - sfrac, nrow = ns, ncol = ns)
-    rownames(coefs) <- c("(Intercept)", rownames(object$beta))
+    #rownames(coefs) <- c("(Intercept)", rownames(object$beta))
+    if(object$family$family == "ordinal"){
+      rownames(coefs) <- c(paste0("y>=", object$ylev[-1]), rownames(object$beta))
+    } else {
+      rownames(coefs) <- c("(Intercept)", rownames(object$beta))
+    }
     colnames(coefs) <- paste0("s", 1:ns)
     class(coefs) <- "coef.grpnet"
     return(coefs)

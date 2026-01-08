@@ -1,3 +1,31 @@
+Version 1.1   (2026-01-07)
+
+   1) ordinal: new loss function for ordinal classification
+	* Implements proportional odds logistic regression (polr)
+	* Uses cumulative link model framework:  Prob(Y >= y | X = x)
+	* Can be applied to ordered factors or continuous data
+
+   2) Bug fix / improvement for cv.grpnet.default
+	* Previously the group labels were replaced by integers
+	* Now group labels are retained as in the formula method
+	* Allows for simpler comparison between two methods
+
+   3) Bug fix / improvement for coef.cv.grpnet and coef.grpnet
+	* previously these S3 methods were unintentionally unregistered
+	* now the S3 coef methods for cv.grpnet and grpnet are registered
+
+   4) Bug fix / improvement for type = "importance" in predict methods
+	* previously would result in NaN if no terms were active in model
+	* caused by dividing by zero to normalize the importance indices
+	* now the normalization only happens if there is 1+ active term(s)
+
+   5) Updates and improvements to package documentation
+	* corrections to typos / out-of-date text
+	* modified / expanded comments throughout
+
+
+
+
 Version 1.0   (2025-06-09)
 
    1) New loss functions for binary classification

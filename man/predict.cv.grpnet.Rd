@@ -116,6 +116,78 @@ mean(abs(y - fit.min))
 
 
 
+######***######   family = "svm1"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+set.seed(1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "svm1")
+
+# get predicted classes at "lambda.1se"
+fit.1se <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
+
+# compare misclassification rate for two solutions
+1 - mean(auto$origin == fit.1se)
+1 - mean(auto$origin == fit.min)
+
+
+
+######***######   family = "svm2"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+set.seed(1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "svm2")
+
+# get predicted classes at "lambda.1se"
+fit.1se <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
+
+# compare misclassification rate for two solutions
+1 - mean(auto$origin == fit.1se)
+1 - mean(auto$origin == fit.min)
+
+
+
+######***######   family = "logit"   ######***######
+
+# load data
+data(auto)
+
+# redefine origin (Domestic vs Foreign)
+auto$origin <- ifelse(auto$origin == "American", "Domestic", "Foreign")
+
+# fit model (formula method, response = origin with 2 levels)
+set.seed(1)
+mod <- cv.grpnet(origin ~ ., data = auto, family = "logit")
+
+# get predicted classes at "lambda.1se"
+fit.1se <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
+
+# compare misclassification rate for two solutions
+1 - mean(auto$origin == fit.1se)
+1 - mean(auto$origin == fit.min)
+
+
+
 ######***######   family = "binomial"   ######***######
 
 # load data
@@ -158,6 +230,27 @@ fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
 # compare misclassification rate for two solutions
 1 - mean(auto$origin == fit.1se)
 1 - mean(auto$origin == fit.min)
+
+
+
+######***######   family = "ordinal"   ######***######
+
+# load data
+data(auto)
+
+# 10-fold cv (formula method, response = cylinders with 5 levels)
+set.seed(1)
+mod <- cv.grpnet(cylinders ~ ., data = auto, family = "ordinal")
+
+# get predicted classes at "lambda.1se"
+fit.1se <- predict(mod, newdata = auto, type = "class")
+
+# get predicted classes at "lambda.min"
+fit.min <- predict(mod, newdata = auto, type = "class", s = "lambda.min")
+
+# compare misclassification rate for two solutions
+1 - mean(auto$cylinders == fit.1se)
+1 - mean(auto$cylinders == fit.min)
 
 
 

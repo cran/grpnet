@@ -101,7 +101,11 @@ plot.grpnet <-
             }
           }
         } else {
-          index <- (1+int):nrow(res)
+          if(x$family$family == "ordinal"){
+            index <- length(x$ylev):nrow(res)
+          } else{
+            index <- (1+int):nrow(res)
+          }
           plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
                xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
           for(k in index) {

@@ -7,7 +7,7 @@ grpnet.formula <-
            use.rk = TRUE,
            family = c("gaussian", "multigaussian", 
                       "svm1", "svm2", "logit",
-                      "binomial", "multinomial", 
+                      "binomial", "multinomial", "ordinal",
                       "poisson", "negative.binomial", 
                       "Gamma", "inverse.gaussian"),
            weights = NULL,
@@ -29,7 +29,7 @@ grpnet.formula <-
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-05-29
+    # Updated: 2025-08-15
     
     
     ######***######   INITIAL CHECKS   ######***######

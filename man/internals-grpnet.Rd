@@ -15,6 +15,8 @@
 \alias{grpnet_multinom_dev}
 \alias{grpnet_negbin}
 \alias{grpnet_negbin_dev}
+\alias{grpnet_ordinal}
+\alias{grpnet_ordinal_int}
 \alias{grpnet_penalty}
 \alias{grpnet_poisson}
 \alias{grpnet_poisson_dev}
@@ -39,6 +41,8 @@
 \alias{R_grpnet_negbin}
 \alias{R_grpnet_negbin_dev}
 \alias{R_grpnet_penalty}
+\alias{R_grpnet_ordinal}
+\alias{R_grpnet_ordinal_int}
 \alias{R_grpnet_poisson}
 \alias{R_grpnet_poisson_dev}
 \alias{R_grpnet_svm1}
@@ -102,6 +106,15 @@ R_grpnet_negbin(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha,
                 nlam, lambda, lmr, penid, gamma, eps, maxit,
                 standardize, intercept, ibeta, betas, iters,
                 nzgrps, nzcoef, edfs, devs, nulldev, theta)                
+
+# R translation of grpnet_ordinal.f90
+R_grpnet_ordinal(nobs, nvars, nresp, x, y, w, off, ngrps, gsize, pw,
+                 alpha, nlam, lambda, lmr, penid, gamma, eps, maxit,
+                 standardize, intercept, ibeta, betas, iters,
+                 nzgrps, nzcoef, edfs, devs, nulldev)
+                 
+# R translation of grpnet_ordinal_int.f90
+R_grpnet_ordinal_int(nobs, nresp, eta, y, w, yfreq, theta, maxdif)                 
 
 # R translation of grpnet_poisson.f90
 R_grpnet_poisson(nobs, nvars, x, y, w, off, ngrps, gsize, pw, alpha, 

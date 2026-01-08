@@ -16,7 +16,7 @@ grpnet(x, \dots)
        group, 
        family = c("gaussian", "multigaussian",
                   "svm1", "svm2", "logit",
-                  "binomial", "multinomial", 
+                  "binomial", "multinomial", "ordinal",
                   "poisson", "negative.binomial", 
                   "Gamma", "inverse.gaussian"),
        weights = NULL, 
@@ -43,7 +43,7 @@ grpnet(x, \dots)
        use.rk = TRUE,
        family = c("gaussian", "multigaussian",
                   "svm1", "svm2", "logit",
-                  "binomial", "multinomial", 
+                  "binomial", "multinomial", "ordinal",
                   "poisson", "negative.binomial", 
                   "Gamma", "inverse.gaussian"),
        weights = NULL,
@@ -399,6 +399,22 @@ data(auto)
 
 # fit model (formula method, response = origin with 3 levels)
 mod <- grpnet(origin ~ ., data = auto, family = "multinomial")
+
+# print regularization path info
+mod
+
+# plot proportion of null deviance explained
+plot(mod)
+
+
+
+######***######   family = "ordinal"   ######***######
+
+# load data
+data(auto)
+
+# fit model (formula method, response = cylinders with 5 levels)
+mod <- grpnet(cylinders ~ ., data = auto, family = "ordinal")
 
 # print regularization path info
 mod
