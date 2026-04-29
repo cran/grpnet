@@ -50,10 +50,13 @@ print.cv.grpnet <-
   } # end print.cv.grpnet
 
 plot.cv.grpnet <-
-  function(x, sign.lambda = 1, nzero = TRUE, ...){
+  function(x, cv = TRUE, sign.lambda = 1, nzero = TRUE, ...){
     
     # check x
     if(!inherits(x, "cv.grpnet")) stop("Input 'x' must be an object of class 'cv.grpnet'")
+    
+    # check cv
+    if(!cv) return(plot(x$grpnet.fit, ...))
     
     # check sign.lambda
     sign.lambda <- as.numeric(sign.lambda[1])

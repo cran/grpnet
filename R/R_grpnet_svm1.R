@@ -5,14 +5,14 @@ R_grpnet_svm1 <-
            nzgrps, nzcoef, edfs, devs, nulldev, theta){
     # grpnet_svm1.f90 translation to R
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-05-29
+    # Updated: 2026-04-09
     
     
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
-    ia <- ib <- rep(NA, ngrps)
-    xmean <- rep(NA, nvars)
-    xev <- rep(NA, ngrps)
-    difbeta <- rep(NA, nvars)
+    ia <- ib <- rep(0L, ngrps)
+    xmean <- rep(0.0, nvars)
+    xev <- rep(0.0, ngrps)
+    difbeta <- rep(0.0, nvars)
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
     
     

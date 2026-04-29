@@ -5,14 +5,14 @@ R_grpnet_multigaus <-
            nzgrps, nzcoef, edfs, devs, nulldev){
     # grpnet_gaussian.f90 translation to R
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-01-17
+    # Updated: 2026-04-09
     
     
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
-    ia <- ib <- rep(NA, ngrps)
-    xmean <- rep(NA, nvars)
-    xev <- rep(NA, ngrps)
-    difbeta <- matrix(NA, nvars, nresp)
+    ia <- ib <- rep(0L, ngrps)
+    xmean <- rep(0.0, nvars)
+    xev <- rep(0.0, ngrps)
+    difbeta <- matrix(0.0, nvars, nresp)
     # ! --------------- LOCAL DEFINITIONS --------------- ! #
     
     

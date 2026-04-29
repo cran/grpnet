@@ -8,12 +8,15 @@ Plot Cross-Validation Curve for cv.grpnet Fits
 Plots the mean cross-validation error, along with lower and upper standard deviation curves, as a function of \code{log(lambda)}.
 }
 \usage{
-\method{plot}{cv.grpnet}(x, sign.lambda = 1, nzero = TRUE, ...)
+\method{plot}{cv.grpnet}(x, cv = TRUE, sign.lambda = 1, nzero = TRUE, ...)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
   \item{x}{
 Object of class "cv.grpnet"
+}
+  \item{cv}{
+If \code{TRUE} (default), plots the cross-validation path as described in this helpful. Otherwise passes the \code{grpnet.fit} component to the \code{\link{plot.grpnet}} function.
 }
   \item{sign.lambda}{
 Default plots \code{log(lambda)} on the x-axis. Set to -1 to plot \code{-1*log(lambda)} on the x-axis instead.

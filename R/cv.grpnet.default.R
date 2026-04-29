@@ -21,7 +21,7 @@ cv.grpnet.default <-
            ...){
     # k-fold cross-validation for grpnet (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-12-12
+    # Updated: 2026-04-09
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -271,7 +271,7 @@ cv.grpnet.default <-
       if(family == "ordinal"){
         ytab <- table(yfac)
         if(min(ytab) == 1L) stop("When family = 'oridinal', response must satisfy:  min(table(as.ordered(y))) > 1")
-        foldid <- rep(NA, nobs)
+        foldid <- rep(0L, nobs)
         for(k in 1:nlev){
           kid <- which(yfac == ylev[k])
           nkid <- length(kid)
@@ -396,7 +396,7 @@ cv.grpnet.default <-
       
       ## initialize to hold results
       alpha <- rev(alpha)
-      tune.res <- expand.grid(alpha = alpha, gamma = gamma, cvm = NA)
+      tune.res <- expand.grid(alpha = alpha, gamma = gamma, cvm = 0.0)
       if(penalty == 1L) tune.res$gamma <- NULL
       
       ## loop through alpha and gamma
@@ -495,7 +495,7 @@ cv.grpnet.default <-
     ######***######   K-FOLD CV   ######***######
     
     ### initialize matrix for results
-    cvloss <- matrix(NA, nrow = nlambda, ncol = nfolds)
+    cvloss <- matrix(0.0, nrow = nlambda, ncol = nfolds)
     
     ### separate work for multigaussian and multinomial family
     if(family == "multigaussian"){
@@ -536,7 +536,7 @@ cv.grpnet.default <-
                            proglang = proglang)
             mu <- predict(temp, newx = xmat[testid,,drop=FALSE], 
                           s = if(same.lambda) NULL else lambda)
-            cvloss <- rep(NA, nlambda)
+            cvloss <- rep(0.0, nlambda)
             if(type.measure == "deviance"){
               for(i in 1:nlambda){
                 cvloss[i] <- mean(temp$family$dev.resids(ymat[testid,], mu[,,i], weights[testid]))
@@ -682,7 +682,7 @@ cv.grpnet.default <-
             mu <- predict(temp, newx = xmat[testid,,drop=FALSE], 
                           s = if(same.lambda) NULL else lambda,
                           type = ifelse(type.measure == "class", "class", "response"))
-            cvloss <- rep(NA, nlambda)
+            cvloss <- rep(0.0, nlambda)
             y01 <- ymat[testid,,drop=FALSE] / yrowsum[testid]
             if(type.measure == "deviance"){
               w01 <- weights[testid] * yrowsum[testid]

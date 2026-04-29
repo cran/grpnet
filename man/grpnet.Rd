@@ -36,6 +36,7 @@ grpnet(x, \dots)
        maxit = 1e05,
        proglang = c("Fortran", "R"),
        standardize.response = FALSE,
+       keep.data = TRUE,
        ...)
       
 \method{grpnet}{formula}(formula,
@@ -62,6 +63,7 @@ grpnet(x, \dots)
        maxit = 1e05,
        proglang = c("Fortran", "R"),
        standardize.response = FALSE,
+       keep.data = TRUE,
        ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -140,6 +142,9 @@ Which programming language should be used to implement the ABGD algorithm? Optio
 }
   \item{standardize.response}{
 Should columns of response be standardized to have unit variance before fitting the model? Only applicable when \code{family = "multigaussian"}. Note that coefficients are returned on the original (unstandardized) scale regardless of this input.
+}
+  \item{keep.data}{
+Should the training data be saved? Note this is needed for the \code{\link{summary.grpnet}} function to compute fitted values and importances.
 }
   \item{\dots}{
 Additional arguments used by the default or formula method.
@@ -275,6 +280,8 @@ where \eqn{j \in \{1,\ldots,p\}} and \eqn{\epsilon} is the \code{thresh} argumen
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
+\code{\link{summary.grpnet}} for calculating fitted values and importances
+
 \code{\link{plot.grpnet}} for plotting the regularization path
 
 \code{\link{predict.grpnet}} for predicting from \code{\link{grpnet}} objects
@@ -296,6 +303,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 \donttest{
 ######***######   family = "multigaussian"   ######***######
@@ -313,6 +323,9 @@ mod
 
 # plot proportion of null deviance explained
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -333,6 +346,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "svm2"   ######***######
@@ -351,6 +367,9 @@ mod
 
 # plot proportion of null deviance explained
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -371,6 +390,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "binomial"   ######***######
@@ -390,6 +412,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "multinomial"   ######***######
@@ -405,6 +430,9 @@ mod
 
 # plot proportion of null deviance explained
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -422,6 +450,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "poisson"   ######***######
@@ -437,6 +468,9 @@ mod
 
 # plot proportion of null deviance explained
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -454,6 +488,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "Gamma"   ######***######
@@ -470,6 +507,9 @@ mod
 # plot proportion of null deviance explained
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "inverse.gaussian"   ######***######
@@ -485,6 +525,9 @@ mod
 
 # plot proportion of null deviance explained
 plot(mod)
+
+# summarize model
+summary(mod)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

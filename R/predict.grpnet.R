@@ -12,7 +12,7 @@ predict.grpnet <-
            ...){
     # predict from a fit grpnet object
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-12-11
+    # Updated: 2026-03-31
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -137,7 +137,7 @@ predict.grpnet <-
       } else {
         newx <- model.matrix(object = object$formula, data = newdata)
       }
-      if(colnames(newx)[1] == "(Intercept)") newx <- newx[,-1]
+      if(colnames(newx)[1] == "(Intercept)") newx <- newx[,-1,drop=FALSE]
       ncoefs <- if(is.list(object$beta)) nrow(as.matrix(object$beta[[1]])) else nrow(as.matrix(object$beta))
       if(ncol(newx) != ncoefs) stop("Input 'newdata' produced a design matrix of the wrong dimension\n(likely due to a factor level mismatch between 'data' and 'newdata')")
       object$formula <- NULL
@@ -328,7 +328,7 @@ predict.grpnet <-
       nresp <- length(object$beta)
       
       ### initialize array for predictions
-      fit <- array(data = NA, dim = c(nobs, nresp, ns))
+      fit <- array(data = 0.0, dim = c(nobs, nresp, ns))
       dimnames(fit) <- list(newxnames, object$ylev, paste0("s", 1:ns))
       
       ### predictions at object$lambda are easy...
@@ -425,7 +425,7 @@ predict.grpnet <-
             fit <- object$family$linkinv(fit)
           } else if(type == "class"){
             fit <- object$family$linkinv(fit)
-            yc <- rep(NA, nobs)
+            yc <- rep("NA", nobs)
             mu <- cbind(1, fit)
             mu <- cbind(mu[,1:(nlev-1)] - mu[,2:nlev], mu[,nlev])
             fit <- object$ylev[apply(mu, 1, which.max)]
@@ -440,7 +440,7 @@ predict.grpnet <-
             fit <- object$family$linkinv(fit)
           } else if(type == "class"){
             fit <- object$family$linkinv(fit)
-            yc <- matrix(NA, nrow = nobs, ncol = nlam)
+            yc <- matrix("NA", nrow = nobs, ncol = nlam)
             colnames(yc) <- paste0("s", 1:nlam)
             for(i in 1:nlam){
               mu <- cbind(1, fit[,,i])
@@ -463,7 +463,7 @@ predict.grpnet <-
           fit <- object$family$linkinv(fit)
         } else if(type == "class"){
           fit <- object$family$linkinv(fit)
-          yc <- rep(NA, nobs)
+          yc <- rep("NA", nobs)
           mu <- cbind(1, fit)
           mu <- cbind(mu[,1:(nlev-1)] - mu[,2:nlev], mu[,nlev])
           fit <- object$ylev[apply(mu, 1, which.max)]
@@ -514,7 +514,7 @@ predict.grpnet <-
         fit <- object$family$linkinv(fit)
       } else if(type == "class"){
         fit <- object$family$linkinv(fit)
-        yc <- matrix(NA, nrow = nobs, ncol = ns)
+        yc <- matrix("NA", nrow = nobs, ncol = ns)
         colnames(yc) <- paste0("s", 1:ns)
         for(i in 1:ns){
           mu <- cbind(1, fit[,,i])

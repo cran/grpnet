@@ -27,10 +27,11 @@ grpnet.default <-
            maxit = 1e05,
            proglang = c("Fortran", "R"),
            standardize.response = FALSE,
+           keep.data = TRUE,
            ...){
     # group elastic net regularized regression (default)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-08-15
+    # Updated: 2025-04-07
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -47,6 +48,13 @@ grpnet.default <-
     nvars <- ncol(x)
     ny <- if(is.matrix(y)) nrow(y) else length(y)
     if(ny != nobs) stop("Inputs 'x' and 'y' must satisfy:\nnrow(x) == length(y)  or  nrow(x) == nrow(y)")
+    
+    ### keep.data?
+    if(keep.data){
+      data <- list(x = x, y = y)
+    } else {
+      data <- NULL
+    }
     
     ### x names
     xnames <- colnames(x)
@@ -1247,7 +1255,8 @@ grpnet.default <-
                 time = toc - tic,
                 offset = include.offset,
                 args = args,
-                term.labels = gnames)
+                term.labels = gnames,
+                data = data)
     
     ### return results
     class(res) <- "grpnet"

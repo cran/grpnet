@@ -21,7 +21,7 @@ cv.grpnet.formula <-
            ...){
     # k-fold cross-validation for grpnet (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2024-10-10
+    # Updated: 2026-04-09
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -168,6 +168,9 @@ cv.grpnet.formula <-
     
     ### add the rk.args
     res$grpnet.fit$rk.args <- rk.args
+    
+    ### add the data
+    res$grpnet.fit$data <- data
     
     ### return results
     return(res)

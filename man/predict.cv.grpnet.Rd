@@ -5,7 +5,7 @@
 Predict Method for cv.grpnet Fits
 }
 \description{
-Obtain predictions from a cross-validated group elastic net regularized GLM (cv.grpnet) object.
+Obtain predictions from a cross-validated group elastic net (cv.grpnet) object.
 }
 \usage{
 \method{predict}{cv.grpnet}(object, 

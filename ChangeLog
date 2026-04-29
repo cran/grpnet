@@ -1,3 +1,31 @@
+Version 1.2   (2026-04-29)
+
+   1) New summary S3 method for grpnet and cv.grpnet
+	* Computes fitted values and variable importances
+	* Print methods also exist for each case
+
+   2) Added keep.data argument to grpnet function
+	* New default keeps a copy of the data
+	* For fitted values, importances, etc.
+
+   3) Updates to plot.grpnet() and plot.cv.grpnet()
+	* xlab = expression(log(lambda)) for all plots
+	* Added "cv" argument to plot.cv.grpnet()
+
+   4) Bug fix in predict.grpnet() for single row of newdata
+	* Previously caused error when nrow(newdata) = 1
+	* Update allows for prediction at single data point
+
+   5) Computational improvements to row.kronecker() function
+	* Previously column names were grown inside for loop
+	* Update initializes column names and fills in values
+
+   6) Various inconsequential updates for efficiency and readable
+
+
+
+
+
 Version 1.1   (2026-01-07)
 
    1) ordinal: new loss function for ordinal classification

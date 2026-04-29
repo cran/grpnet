@@ -5,7 +5,7 @@
 Predict Method for grpnet Fits
 }
 \description{
-Obtain predictions from a fit group elastic net regularized GLM (grpnet) object.
+Obtain predictions from a fit group elastic net (grpnet) object.
 }
 \usage{
 \method{predict}{grpnet}(object, 

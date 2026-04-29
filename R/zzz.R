@@ -21,7 +21,3 @@ grpnetStartupMessage <-
     packageStartupMessage(msg)      
     invisible()
   }
-
-
-
-

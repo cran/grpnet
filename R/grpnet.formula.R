@@ -26,10 +26,11 @@ grpnet.formula <-
            maxit = 1e05,
            proglang = c("Fortran", "R"),
            standardize.response = FALSE,
+           keep.data = TRUE,
            ...){
     # group elastic net regularized regression (formula)
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # Updated: 2025-08-15
+    # Updated: 2025-04-07
     
     
     ######***######   INITIAL CHECKS   ######***######
@@ -148,6 +149,9 @@ grpnet.formula <-
     
     ### add the rk.args
     res$rk.args <- rk.args
+    
+    ### add the data
+    res$data <- data
     
     ### return results
     return(res)

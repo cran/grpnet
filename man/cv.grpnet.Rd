@@ -167,6 +167,8 @@ When \code{adaptive = TRUE}, the adaptive group elastic net is used: \cr
 %% ~Make other sections like Warning with \section{Warning }{....} ~
 
 \seealso{
+\code{\link{summary.cv.grpnet}} for calculating fitted values and importances
+
 \code{\link{plot.cv.grpnet}} for plotting the cross-validation error curve
 
 \code{\link{predict.cv.grpnet}} for predicting from \code{\link{cv.grpnet}} objects
@@ -190,6 +192,9 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "multigaussian"   ######***######
@@ -208,6 +213,9 @@ mod
 
 # plot cv error curve
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -229,6 +237,9 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "svm2"   ######***######
@@ -248,6 +259,9 @@ mod
 
 # plot cv error curve
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -269,6 +283,10 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
+
+
 
 ######***######   family = "binomial"   ######***######
 
@@ -288,6 +306,9 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "multinomial"   ######***######
@@ -304,6 +325,9 @@ mod
 
 # plot cv error curve
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -322,6 +346,9 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "poisson"   ######***######
@@ -338,6 +365,9 @@ mod
 
 # plot cv error curve
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -356,6 +386,9 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
+
 
 
 ######***######   family = "Gamma"   ######***######
@@ -372,6 +405,9 @@ mod
 
 # plot cv error curve
 plot(mod)
+
+# summarize model
+summary(mod)
 
 
 
@@ -390,6 +426,8 @@ mod
 # plot cv error curve
 plot(mod)
 
+# summarize model
+summary(mod)
 }
 }
 % Add one or more standard keywords, see file 'KEYWORDS' in the

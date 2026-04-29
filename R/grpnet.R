@@ -44,7 +44,7 @@ plot.grpnet <-
     }
     if(type == "dev.ratio"){
       plot(log(x$lambda), x$dev.ratio,
-           xlab = "Log Lambda", ylab = "Explained Deviance", ...)
+           xlab = expression(log(lambda)), ylab = "Explained Deviance", ...)
     } else {
       res <- predict(x, newx = newx, newdata = newdata, type = type)
       if(type == "imp"){
@@ -60,7 +60,7 @@ plot.grpnet <-
           index <- (1+int):nrow(res[[1]])
           for(j in 1:length(res)){
             plot(log(x$lambda), res[[j]][1,], ylim = extendrange(sapply(res, function(x) range(x[index,], na.rm = TRUE))),
-                 xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
+                 xlab = expression(log(lambda)), ylab = "Importance", t = "n", ...)
             legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
             for(k in index) {
               lines(log(x$lambda), res[[j]][k,], col = colors[k])
@@ -74,7 +74,7 @@ plot.grpnet <-
           colnames(res) <- cnames
           index <- (1+int):nrow(res)
           plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
-               xlab = "Log Lambda", ylab = "Importance", t = "n", ...)
+               xlab = expression(log(lambda)), ylab = "Importance", t = "n", ...)
           for(k in index) {
             lines(log(x$lambda), res[k,], col = colors[k])
           }
@@ -83,7 +83,7 @@ plot.grpnet <-
         colors <- col
         index <- (1+int):nrow(res)
         plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
-             xlab = "Log Lambda", ylab = "L2 Norm", t = "n", ...)
+             xlab = expression(log(lambda)), ylab = "L2 Norm", t = "n", ...)
         for(k in index) {
           lines(log(x$lambda), res[k,], col = colors[k])
         }
@@ -93,7 +93,7 @@ plot.grpnet <-
           index <- (1+int):nrow(res[[1]])
           for(j in 1:length(res)){
             plot(log(x$lambda), res[[j]][1,], ylim = extendrange(res[[j]][index,]),
-                 xlab = "Log Lambda", ylab = "Coefficients", t = "n", 
+                 xlab = expression(log(lambda)), ylab = "Coefficients", t = "n", 
                  main = x$ylev[j], ...)
             #legend("top", legend = x$ylev[j], bty = "n", cex = 0.8)
             for(k in index) {
@@ -107,7 +107,7 @@ plot.grpnet <-
             index <- (1+int):nrow(res)
           }
           plot(log(x$lambda), res[1,], ylim = extendrange(res[index,]),
-               xlab = "Log Lambda", ylab = "Coefficients", t = "n", ...)
+               xlab = expression(log(lambda)), ylab = "Coefficients", t = "n", ...)
           for(k in index) {
             lines(log(x$lambda), res[k,], col = colors[k])
           }

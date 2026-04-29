@@ -16,7 +16,7 @@ cv.compare <-
            ...){
     # compare multiple cv.grpnet prediction errors
     # Nathaniel E. Helwig (helwig@umn.edu)
-    # 2024-06-05
+    # 2026-04-09
     
     
     ### xlist
@@ -61,7 +61,7 @@ cv.compare <-
       rx <- rx[2] - rx[1]
       
       ## extract mean cv error and sd
-      cvm <- cvsd <- rep(NA, nx)
+      cvm <- cvsd <- rep(0.0, nx)
       for(i in 1:nx){
         index <- x[[i]]$index[sid]
         cvm[i] <- x[[i]]$cvm[index]
